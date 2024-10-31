@@ -1,0 +1,270 @@
+---
+title: "Term Project"
+format: 
+  html:
+    code-fold: true
+    toc: true
+    number-sections: true
+    embed-resources: true
+theme: Litera
+editor: visual
+execute:
+  echo: true
+  message: false
+  warning: false
+---
+
+```{r}
+library(tidyverse)
+library(here)
+library(quantmod) #tools for modeling financial data
+library(patchwork)
+```
+
+# Define Portfolios
+
+1.  Define the date range for the investment model
+
+```{r}
+# Define the date range
+start_date <- "2014-01-01"
+end_date <- "2019-12-31"
+```
+
+2.  Build portfolios of brown and green firms.
+
+Brown firms include: Exxon Mobil (XOM), Chevron (CVX), BP (BP), ConocoPhillips (COP), and Shell (SHEL).
+
+Green firms include: NextEra Energy (NEE), Tesla (TSLA), Enphase Energy (ENPH), Brookfield Renewable Partners (BEP), and First Solar (FSLR).
+
+```{r}
+#create vectors based on brown and green tickers
+brown_tickers <- c("XOM", "CVX", "BP", "COP", "SHEL")  # Fossil fuel companies
+green_tickers <- c("NEE", "TSLA", "ENPH", "BEP", "FSLR")  # Renewable/green tech companies
+
+```
+
+```{r}
+# Fetch data for the Brown Portfolio
+#getSymbols = fetches historical stock data for these tickers from Yahoo Finance
+
+for (ticker in brown_tickers) {
+  getSymbols(ticker, src = "yahoo", from = start_date, to = end_date)
+}
+
+# Fetch data for the Green Portfolio
+for (ticker in green_tickers) {
+  getSymbols(ticker, src = "yahoo", from = start_date, to = end_date)
+}
+```
+
+3.  Merge the adjusted closing prices for all stocks in each portfolio into individual data frames
+
+    **`lapply(brown_tickers, function(ticker) Ad(get(ticker)))`:**
+
+    -   `lapply()` iterates over each ticker in `brown_tickers`.
+
+    -   For each ticker, the function `get(ticker)` retrieves the stock data (including Open, High, Low, Close, Volume, and Adjusted Close prices).
+
+    -   `Ad()` then extracts just the Adjusted Close price for each stock, creating a list of Adjusted Close prices for each ticker in the brown portfolio.
+
+    **`do.call(merge, ...)`:**
+
+    -   `do.call()` applies the `merge` function across the list of Adjusted Close prices created by `lapply()`.
+
+    -   `merge` combines these individual Adjusted Close prices into a single data frame (`brown_prices`) where each column represents one stock’s Adjusted Close price, with dates aligned across all stocks.
+
+Adjusted Closing Prices: An adjusted closing price (ACP) is a modified closing price that takes into account events that impact a stock's value, such as dividends, stock splits, and rights offerings. The ACP is a more accurate representation of a stock's value than the closing price, which only shows what investors paid for shares at the end of a trading day. Insight to how the stock has changed over time.
+
+```{r}
+# Combine adjusted closing prices for each portfolio
+brown_prices <- do.call(merge, lapply(brown_tickers, function(ticker) Ad(get(ticker))))
+
+green_prices <- do.call(merge, lapply(green_tickers, function(ticker) Ad(get(ticker))))
+
+```
+
+4.  Calculate daily returns for each portfolio
+
+-   **Daily return =** The calculated daily returns for each stock in the portfolio represent the percentage change in the stock's price from one day to the next. Each entry in the daily returns data frame shows the percentage change between the Adjusted Close price of one day and the previous day. Insight into daily performance. Daily returns are essential for calculating volatility.
+
+```{r}
+brown_returns <- na.omit(ROC(brown_prices, type = "discrete"))
+green_returns <- na.omit(ROC(green_prices, type = "discrete"))
+
+```
+
+Calculates the daily returns for each portfolio using the Rate of Change (ROC) function.
+
+**Function Definition:** The `ROC()` function calculates the rate of change (returns) between the current price and the previous price in a time series.
+
+**Parameters:**
+
+-   **Input:** The function takes a time series of prices as input, specifically the data frames `brown_prices` and `green_prices`, which contain the Adjusted Close prices for the respective portfolios.
+
+-   **Type:** The parameter `type = "discrete"` specifies the method of return calculation. When set to "discrete," the function computes returns using the following formula:
+
+    $$
+    \text{Return} = \frac{P_t - P_{t-1}}{P_{t-1}} = \frac{P_t}{P_{t-1}} - 1
+    $$
+
+    where:
+
+    -   Pt is the current price (Adjusted Close price at time t
+    -   Pt-1 is the previous price (Adjusted Close price at time t-1
+
+5.  Calculate Annualized Mean Returns for Each Portfolio
+
+Find the annual mean returns for each portfolio by taking the mean of the daily returns and multiplying by 252 (the approx. number of trading days in a year)
+
+```{r}
+# Calculate annualized mean returns for each portfolio
+brown_avg_return <- mean(brown_returns) * 252
+green_avg_return <- mean(green_returns) * 252
+
+```
+
+6.  Adjusted Standard Deviations for Monthly Returns
+
+The standard deviations for monthly returns are calculated by dividing the annual standard deviation by the square root of 12. This adjustment reflects the compounding effect of volatility over time, as it translates annual risk into a monthly context. By defining the standard deviation for each portfolio, we account for the reality that returns fluctuate, which is essential for simulating random monthly returns and assessing potential risks associated with the investments.
+
+The standard deviation of monthly returns is calculated by dividing the annual standard deviation by the square root of 12 (the number of months in a year). This adjustment accounts for the compounding effect of volatility over time. -- does this make sense?
+
+-   **figure out what the standard deviation of the monthly returns should be for each portfolio**
+
+```{r}
+# adjusted standard deviations for monthly returns (update SD to reflect true SD)
+brown_sd <- 0.02 / sqrt(12)   
+green_sd <- 0.015 / sqrt(12)    
+
+```
+
+# Set up the For Loop
+
+7.  Specify variables for the model:
+
+```{r}
+# Set up initial variables
+set.seed(123)  # For reproducibility
+initial_investment <- 10000 # starting investment is 10k
+n_scenarios <- 100  # Number of scenarios to simulate
+n_months <- 60  # Simulation for 5 years (60 months)
+
+```
+
+8.  Create new data frame to hold results:
+
+Variables:
+
+-   Scenario: Scenario number
+-   Brown_allocation: Portion of investment in brown stocks
+-   Green_allocation: Portion of investment in green stocks
+-   Final_value: Final portfolio value after the simulation
+-   Total_return: Total return on investment
+
+```{r}
+results <- data.frame(
+  scenario = integer(),
+  brown_allocation = numeric(),
+  green_allocation = numeric(),
+  final_value = numeric(),
+  total_return = numeric()
+)
+```
+
+9.  Create a loop to run 100 investing scenarios over a 5 year time period:
+
+-   Each loop represents a unique investment scenario characterized by different random allocations and returns. For each iteration, a random allocation for brown stocks is generated using `runif(1, 0, 1)`, while the remaining portion is allocated to green stocks.
+
+-   The simulation models monthly returns for each portfolio using a normal distribution with parameters:
+
+    -   `n_months` (the total number of months)
+
+    -    `brown_avg_return / 12` (the mean monthly return for brown stocks)
+
+    -   `brown_sd` (the standard deviation for brown stocks)
+
+-   The portfolio value is initialized to the initial investment, followed by a nested loop that iterates through each month of the simulation for a total of 60 months. During each month, the weighted monthly return is calculated based on the portfolio allocations, and the portfolio value is updated.
+
+-   The total return on investment is computed as a fraction of the initial investment, giving us insights into the portfolio's performance over time.
+
+```{r}
+# Run scenarios with a loop
+#loop repeats until i equals n_scenarios (100). 
+for (i in 1:n_scenarios) {
+  
+  # Randomly allocate a portion to brown and the rest to green
+  brown_allocation <- runif(1, 0, 1)    # Random allocation between 0 and 1
+  green_allocation <- 1 - brown_allocation
+  
+  # Generate monthly returns for each portfolio type
+  brown_monthly_returns <- rnorm(n_months, brown_avg_return / 12, brown_sd)
+  green_monthly_returns <- rnorm(n_months, green_avg_return / 12, green_sd)
+  
+  # Calculate portfolio growth over time
+  # j starts at 1 and goes up to n_months (60).
+  portfolio_value <- initial_investment
+  for (j in 1:n_months) {
+    # Update portfolio value with weighted returns for the month
+    monthly_return <- (brown_monthly_returns[j] * brown_allocation) + 
+                      (green_monthly_returns[j] * green_allocation)
+    portfolio_value <- portfolio_value * (1 + monthly_return)
+  }
+  
+  # Calculate cumulative return
+  total_return <- (portfolio_value - initial_investment) / initial_investment
+  
+  # Append row to results
+  results <- rbind(results, data.frame(
+    scenario = i,
+    brown_allocation = brown_allocation,
+    green_allocation = green_allocation,
+    final_value = portfolio_value,
+    total_return = total_return
+  ))
+}
+  
+```
+
+10. Results — @ sadie & madi - can you help me interpret the results?
+
+```{r}
+summary(results)
+```
+
+11. Visualize the portfolio allocation
+
+```{r}
+# Plot total return vs. brown portfolio allocation
+brown_plot <- ggplot(results, aes(x = brown_allocation, y = total_return)) +
+  geom_point(color = "peachpuff4") +
+  labs(
+    title = "Impact of Brown Allocation on Returns",
+    x = "Brown Portfolio Allocation",
+    y = "Total Return" 
+  ) +
+  theme_minimal()
+
+brown_plot
+
+# Plot total return vs. green portfolio allocation
+green_plot <- ggplot(results, aes(x = green_allocation, y = total_return)) +
+  geom_point(color = "springgreen4") +
+  # geom_smooth(sd = FALSE) +
+  labs(
+    title = "Impact of Green Allocation on Returns",
+    x = "Green Portfolio Allocation",
+        # y = NULL) +  # Remove y-axis label
+    y = "Total Return") +
+  theme_minimal()
+
+green_plot
+
+# # patchwork plots
+# brown_plot + green_plot + plot_annotation(
+#   title = "Impact of Brown and Green Allocation on Returns",
+#   theme = theme(plot.title = element_text(hjust = 0.5)))
+  
+
+
+```
