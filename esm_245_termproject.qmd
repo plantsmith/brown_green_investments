@@ -2,7 +2,7 @@
 title: "Term Project"
 format: 
   html:
-    code-fold: true
+    code-fold: false
     toc: true
     number-sections: true
     embed-resources: true
@@ -14,10 +14,17 @@ execute:
   warning: false
 ---
 
+# Questions:
+
+-   What are the uncertainties in this model?
+-   Should we be using the SCC in this model?
+-   Maybe probability is accounted for in the model but randomly distributing the allocation of?
+-   How to incorporate code?
+
 ```{r}
 library(tidyverse)
 library(here)
-library(quantmod) #tools for modeling financial data
+library(quantmod) #for modeling financial data
 library(patchwork)
 ```
 
@@ -26,7 +33,7 @@ library(patchwork)
 1.  Define the date range for the investment model
 
 ```{r}
-# Define the date range
+#define the date range
 start_date <- "2014-01-01"
 end_date <- "2019-12-31"
 ```
@@ -45,7 +52,7 @@ green_tickers <- c("NEE", "TSLA", "ENPH", "BEP", "FSLR")  # Renewable/green tech
 ```
 
 ```{r}
-# Fetch data for the Brown Portfolio
+#get data to build portfolios
 #getSymbols = fetches historical stock data for these tickers from Yahoo Finance
 
 for (ticker in brown_tickers) {
@@ -60,19 +67,19 @@ for (ticker in green_tickers) {
 
 3.  Merge the adjusted closing prices for all stocks in each portfolio into individual data frames
 
-    **`lapply(brown_tickers, function(ticker) Ad(get(ticker)))`:**
+**lapply(brown_tickers, function(ticker) Ad(get(ticker))):**
 
-    -   `lapply()` iterates over each ticker in `brown_tickers`.
+-   `lapply()` iterates over each ticker in brown_tickers.
 
-    -   For each ticker, the function `get(ticker)` retrieves the stock data (including Open, High, Low, Close, Volume, and Adjusted Close prices).
+-   For each ticker, the function `get(ticker)` retrieves the stock data (including Open, High, Low, Close, Volume, and Adjusted Close prices).
 
-    -   `Ad()` then extracts just the Adjusted Close price for each stock, creating a list of Adjusted Close prices for each ticker in the brown portfolio.
+-   `Ad()` then extracts just the Adjusted Close price for each stock, creating a list of Adjusted Close prices for each ticker in the brown portfolio.
 
-    **`do.call(merge, ...)`:**
+**do.call(merge, ...):**
 
-    -   `do.call()` applies the `merge` function across the list of Adjusted Close prices created by `lapply()`.
+-   `do.call()` applies the merge function across the list of Adjusted Close prices created by `lapply()`.
 
-    -   `merge` combines these individual Adjusted Close prices into a single data frame (`brown_prices`) where each column represents one stock’s Adjusted Close price, with dates aligned across all stocks.
+-   merge combines these individual Adjusted Close prices into a single data frame (`brown_prices`) where each column represents one stock’s Adjusted Close price, with dates aligned across all stocks.
 
 Adjusted Closing Prices: An adjusted closing price (ACP) is a modified closing price that takes into account events that impact a stock's value, such as dividends, stock splits, and rights offerings. The ACP is a more accurate representation of a stock's value than the closing price, which only shows what investors paid for shares at the end of a trading day. Insight to how the stock has changed over time.
 
@@ -92,6 +99,7 @@ green_prices <- do.call(merge, lapply(green_tickers, function(ticker) Ad(get(tic
 brown_returns <- na.omit(ROC(brown_prices, type = "discrete"))
 green_returns <- na.omit(ROC(green_prices, type = "discrete"))
 
+
 ```
 
 Calculates the daily returns for each portfolio using the Rate of Change (ROC) function.
@@ -104,23 +112,24 @@ Calculates the daily returns for each portfolio using the Rate of Change (ROC) f
 
 -   **Type:** The parameter `type = "discrete"` specifies the method of return calculation. When set to "discrete," the function computes returns using the following formula:
 
-    $$
+$$
     \text{Return} = \frac{P_t - P_{t-1}}{P_{t-1}} = \frac{P_t}{P_{t-1}} - 1
-    $$
+$$
 
-    where:
+where:
 
-    -   Pt is the current price (Adjusted Close price at time t
-    -   Pt-1 is the previous price (Adjusted Close price at time t-1
+-   Pt is the current price (Adjusted Close price at time t)
+-   Pt-1 is the previous price (Adjusted Close price at time t-1)
 
 5.  Calculate Annualized Mean Returns for Each Portfolio
 
 Find the annual mean returns for each portfolio by taking the mean of the daily returns and multiplying by 252 (the approx. number of trading days in a year)
 
 ```{r}
-# Calculate annualized mean returns for each portfolio
+#calculate annualized mean returns for each portfolio
 brown_avg_return <- mean(brown_returns) * 252
 green_avg_return <- mean(green_returns) * 252
+
 
 ```
 
@@ -133,9 +142,12 @@ The standard deviation of monthly returns is calculated by dividing the annual s
 -   **figure out what the standard deviation of the monthly returns should be for each portfolio**
 
 ```{r}
-# adjusted standard deviations for monthly returns (update SD to reflect true SD)
-brown_sd <- 0.02 / sqrt(12)   
-green_sd <- 0.015 / sqrt(12)    
+#adjusted standard deviations for monthly returns (update SD to reflect true SD)
+brown_sd_og <- sd(brown_returns)
+green_sd_og <- sd(green_returns)
+
+brown_sd <- brown_sd_og / sqrt(12)   
+green_sd <- green_sd_og / sqrt(12)    
 
 ```
 
@@ -144,11 +156,11 @@ green_sd <- 0.015 / sqrt(12)
 7.  Specify variables for the model:
 
 ```{r}
-# Set up initial variables
-set.seed(123)  # For reproducibility
+#set up initial variables
+set.seed(123)  #for reproducibility
 initial_investment <- 10000 # starting investment is 10k
-n_scenarios <- 100  # Number of scenarios to simulate
-n_months <- 60  # Simulation for 5 years (60 months)
+n_scenarios <- 1000  #number of scenarios to simulate
+n_months <- 60  #simulation for 5 years (60 months)
 
 ```
 
@@ -180,7 +192,7 @@ results <- data.frame(
 
     -   `n_months` (the total number of months)
 
-    -    `brown_avg_return / 12` (the mean monthly return for brown stocks)
+    -   `brown_avg_return / 12` (the mean monthly return for brown stocks)
 
     -   `brown_sd` (the standard deviation for brown stocks)
 
@@ -189,20 +201,21 @@ results <- data.frame(
 -   The total return on investment is computed as a fraction of the initial investment, giving us insights into the portfolio's performance over time.
 
 ```{r}
-# Run scenarios with a loop
-#loop repeats until i equals n_scenarios (100). 
+#run scenarios with a loop
+#loop repeats until i equals n_scenarios (100)
+
 for (i in 1:n_scenarios) {
   
-  # Randomly allocate a portion to brown and the rest to green
+  #randomly allocate a portion to brown and the rest to green
   brown_allocation <- runif(1, 0, 1)    # Random allocation between 0 and 1
   green_allocation <- 1 - brown_allocation
   
-  # Generate monthly returns for each portfolio type
+  #generate monthly returns for each portfolio type
   brown_monthly_returns <- rnorm(n_months, brown_avg_return / 12, brown_sd)
   green_monthly_returns <- rnorm(n_months, green_avg_return / 12, green_sd)
   
-  # Calculate portfolio growth over time
-  # j starts at 1 and goes up to n_months (60).
+  #calculate portfolio growth over time
+  #j starts at 1 and goes up to n_months (60).
   portfolio_value <- initial_investment
   for (j in 1:n_months) {
     # Update portfolio value with weighted returns for the month
@@ -211,10 +224,10 @@ for (i in 1:n_scenarios) {
     portfolio_value <- portfolio_value * (1 + monthly_return)
   }
   
-  # Calculate cumulative return
+  #calculate cumulative return
   total_return <- (portfolio_value - initial_investment) / initial_investment
   
-  # Append row to results
+  #update results df
   results <- rbind(results, data.frame(
     scenario = i,
     brown_allocation = brown_allocation,
@@ -225,8 +238,6 @@ for (i in 1:n_scenarios) {
 }
   
 ```
-
-10. Results — @ sadie & madi - can you help me interpret the results?
 
 ```{r}
 summary(results)
