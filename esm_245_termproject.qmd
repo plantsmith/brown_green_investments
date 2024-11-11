@@ -20,6 +20,7 @@ execute:
 -   Should we be using the SCC in this model?
 -   Maybe probability is accounted for in the model but randomly distributing the allocation of?
 -   How to incorporate code?
+-   How do we tie the environmental benefits into this?
 
 ```{r}
 library(tidyverse)
@@ -45,10 +46,21 @@ Brown firms include: Exxon Mobil (XOM), Chevron (CVX), BP (BP), ConocoPhillips (
 Green firms include: NextEra Energy (NEE), Tesla (TSLA), Enphase Energy (ENPH), Brookfield Renewable Partners (BEP), and First Solar (FSLR).
 
 ```{r}
-#create vectors based on brown and green tickers
+# #create vectors based on brown and green tickers
 brown_tickers <- c("XOM", "CVX", "BP", "COP", "SHEL")  # Fossil fuel companies
 green_tickers <- c("NEE", "TSLA", "ENPH", "BEP", "FSLR")  # Renewable/green tech companies
 
+```
+
+```{r}
+# brown_tickers <- c("XOM", "CVX", "BTU", "RTNTF", "BAYRY")  # Fossil fuel companies
+# green_tickers <- c("TSLA", "HGLD", "DNNGY", "BYND","UL")  # Sustainable companies
+```
+
+```{r}
+# # #create vectors based on brown and green tickers
+# brown_tickers <- c("XOM", "CVX", "BP", "COP", "SHEL", "BTU", "RTNTF", "BAYRY" )  # Fossil fuel companies
+# green_tickers <- c("NEE", "TSLA", "ENPH", "BEP", "FSLR", "BYND","HGLD", "UL")  # Renewable/green tech/sustainable companies
 ```
 
 ```{r}
@@ -271,11 +283,155 @@ green_plot <- ggplot(results, aes(x = green_allocation, y = total_return)) +
 
 green_plot
 
-# # patchwork plots
-# brown_plot + green_plot + plot_annotation(
-#   title = "Impact of Brown and Green Allocation on Returns",
-#   theme = theme(plot.title = element_text(hjust = 0.5)))
-  
 
 
 ```
+
+Some sort of environmental aspect:
+Use an emissions factor to estimate average CO₂ emissions per dollar invested in different sectors
+
+```{r}
+# calculate_environmental_cost <- function(brown_allocation, 
+#                                          green_allocation, 
+#                                          # Define parameters that won't change
+#                                          initial_investment = 10000, 
+#                                          emissions_factor_brown = 0.001, 
+#                                          emissions_factor_green = 0.0003, 
+#                                          SCC = 185) {
+#   
+#   # Calculate emissions
+#   brown_emissions <- initial_investment * brown_allocation * emissions_factor_brown
+#   green_emissions <- initial_investment * green_allocation * emissions_factor_green
+#   
+#   # Total emissions and environmental cost
+#   total_emissions <- brown_emissions + green_emissions
+#   environmental_cost <- total_emissions * SCC
+#   
+#   return(environmental_cost)
+# }
+# 
+# 
+# # Example usage of the function
+# brown_allocation <- 0
+# green_allocation <- 1
+# 
+# environmental_cost <- calculate_environmental_cost(brown_allocation, green_allocation)
+# print(environmental_cost)
+
+```
+
+^^^^ this didnt work how I wanted it to
+
+```{r}
+# Parameters for environmental impact (amended code from above)
+SCC <- 185  # Social Cost of Carbon in USD per tonne (this could be updated as needed)
+emissions_factor_brown <- 0.001  # Emissions factor for brown investments: tonnes CO₂ per dollar invested
+emissions_factor_green <- 0.0003  # Emissions factor for green investments: tonnes CO₂ per dollar invested
+
+# Initialize an empty data frame for storing results including environmental impacts
+results <- data.frame(
+  scenario = integer(),
+  brown_allocation = numeric(),
+  green_allocation = numeric(),
+  final_value = numeric(),
+  total_return = numeric(),
+  brown_emissions = numeric(),
+  green_emissions = numeric(),
+  total_emissions = numeric(),
+  environmental_cost = numeric()
+)
+
+#run the scenarios
+for (i in 1:n_scenarios) {
+  
+#randomly allocate a portion to brown and the rest to green
+  brown_allocation <- runif(1, 0, 1)  # Random allocation between 0 and 1
+  green_allocation <- 1 - brown_allocation
+  
+#generate monthly returns for each portfolio type
+  brown_monthly_returns <- rnorm(n_months, brown_avg_return / 12, brown_sd)
+  green_monthly_returns <- rnorm(n_months, green_avg_return / 12, green_sd)
+  
+#initialize portfolio value
+  portfolio_value <- initial_investment
+  for (j in 1:n_months) {
+    # Update portfolio value with weighted returns for the month
+    monthly_return <- (brown_monthly_returns[j] * brown_allocation) + 
+                      (green_monthly_returns[j] * green_allocation)
+    portfolio_value <- portfolio_value * (1 + monthly_return)
+  }
+  
+#calculate cumulative return
+  total_return <- (portfolio_value - initial_investment) / initial_investment
+  
+#calculate emissions based on allocation
+  brown_emissions <- initial_investment * brown_allocation * emissions_factor_brown
+  green_emissions <- initial_investment * green_allocation * emissions_factor_green
+  total_emissions <- brown_emissions + green_emissions
+  
+#calculate environmental cost (social cost of carbon)
+  environmental_cost <- total_emissions * SCC
+  
+#update results data frame
+  results <- rbind(results, data.frame(
+    scenario = i,
+    brown_allocation = brown_allocation,
+    green_allocation = green_allocation,
+    final_value = portfolio_value,
+    total_return = total_return,
+    brown_emissions = brown_emissions,
+    green_emissions = green_emissions,
+    total_emissions = total_emissions,
+    environmental_cost = environmental_cost
+  ))
+}
+
+#results
+summary(results)
+
+```
+
+```{r}
+
+#plot it
+brown_environmental_cost_plot <- ggplot(results, aes(x = brown_allocation, y = environmental_cost)) +
+  geom_line(color = "peachpuff4", size = 1) +  # Use a line instead of points
+  labs(
+    title = "Impact of Brown Allocation on Environmental Cost",
+    x = "Brown Portfolio Allocation",
+    y = "Environmental Cost"
+  ) +
+  theme_minimal()
+
+brown_environmental_cost_plot
+
+
+green_environmental_cost_plot <- ggplot(results, aes(x = green_allocation, y = environmental_cost)) +
+  geom_line(color = "springgreen4", size = 1) +  # Use a line instead of points
+  labs(
+    title = "Impact of Green Allocation on Environmental Cost",
+    x = "Green Portfolio Allocation",
+    y = "Environmental Cost"
+  ) +
+  theme_minimal()
+
+green_environmental_cost_plot
+```
+
+
+
+-   1\. Sector-Specific Emissions factor Data
+
+    Many organizations and studies provide emissions intensity data by sector, measured in tonnes of CO₂ per unit of revenue, production, or value invested. High-emissions sectors typically include energy (especially fossil fuels), utilities, materials, and transportation, while green sectors often include renewable energy, technology with low environmental impact, and environmentally-focused industries.
+
+    You could use emissions intensity data to estimate average CO₂ emissions per dollar invested in different sectors:
+
+    The International Energy Agency (IEA) and Environmental Protection Agency (EPA) publish sectoral emissions intensity data.
+
+    Carbon Disclosure Project (CDP) and Sustainalytics also provide emissions reports, often aggregated by sector.
+
+-   Large companies, especially public companies, publish **annual sustainability or ESG reports** with data on their total CO₂ emissions (Scope 1, 2, and sometimes 3 emissions).
+
+-   To find emissions per dollar invested, take the company’s total emissions and divide it by its market capitalization or revenue.
+
+-   For example, if a company in the energy sector emits 10 million tonnes of CO₂ annually and has a market cap of \$100 billion, you might calculate an approximate emissions rate of 100,000,000,000dollars/10,000,000tonnes​=0.0001tonnes CO₂ per dollar invested.
