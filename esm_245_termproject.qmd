@@ -291,7 +291,7 @@ The emission factors were calculated by taking a company's total emissions acros
 
 ```{r}
 # Parameters for environmental impact (amended code from above)
-SCC <- 185  # Social Cost of Carbon in USD per tonne (this could be updated as needed)
+SCC <- 185  # Social Cost of Carbon in dollars per metric tonne of CO2.
 emissions_factor_brown <- 0.002  # Emissions factor for brown investments: tonnes CO₂ per dollar invested
 emissions_factor_green <- 0.0007  # Emissions factor for green investments: tonnes CO₂ per dollar invested
 
@@ -332,11 +332,12 @@ for (i in 1:n_scenarios) {
   total_return <- (portfolio_value - initial_investment) / initial_investment
   
 #calculate emissions based on allocation
+  #initial investment ($) * allocation * emissions factor (metric tonnes CO2 per dollar invested), dollars cancel out leaving metric tonnes CO2
   brown_emissions <- initial_investment * brown_allocation * emissions_factor_brown
   green_emissions <- initial_investment * green_allocation * emissions_factor_green
-  total_emissions <- brown_emissions + green_emissions
+  total_emissions <- brown_emissions + green_emissions #metric tonnes CO2
   
-#calculate environmental cost (social cost of carbon)
+#calculate environmental cost ($) - emissions in metric tonnes CO2 * SCC in dollars per metric tonne
   environmental_cost <- total_emissions * SCC
   
 #update results data frame
@@ -366,8 +367,8 @@ brown_environmental_cost_plot <- ggplot(results, aes(x = brown_allocation, y = e
   labs(
     title = "Impact of Brown Allocation on Environmental Cost",
     x = "Brown Portfolio Allocation",
-    y = "Environmental Cost"
-  ) +
+    y = "Environmental Cost (USD)") +
+  scale_y_continuous(breaks = seq(0, max(results$environmental_cost), by = 500)) +
   theme_minimal()
 
 brown_environmental_cost_plot
@@ -378,11 +379,12 @@ green_environmental_cost_plot <- ggplot(results, aes(x = green_allocation, y = e
   labs(
     title = "Impact of Green Allocation on Environmental Cost",
     x = "Green Portfolio Allocation",
-    y = "Environmental Cost"
-  ) +
+    y = "Environmental Cost (USD)") +
+ scale_y_continuous(breaks = seq(0, max(results$environmental_cost), by = 500)) + 
   theme_minimal()
 
 green_environmental_cost_plot
+
 ```
 
 
