@@ -1,5 +1,7 @@
 ---
-title: "Term Project"
+title: "Investment Simulation and Environmental Impact Assessment: A Portfolio Analysis of Brown vs. Green Firms"
+description: "Utilize financial modeling tools and carbon accounting models to simulate investment returns and assess environmental impacts over a five-year period."
+date: "2021-10-20"
 format: 
   html:
     code-fold: false
@@ -26,7 +28,6 @@ execute:
 library(tidyverse)
 library(here)
 library(quantmod) #for modeling financial data
-library(patchwork)
 ```
 
 # Define Portfolios
@@ -35,13 +36,13 @@ library(patchwork)
 
 ```{r}
 #define the date range
-start_date <- "2014-01-01"
-end_date <- "2019-12-31"
+start_date <- "2018-01-01"
+end_date <- "2023-12-31"
 ```
 
 2.  Build portfolios of brown and green firms.
 
-Brown firms include: Exxon Mobil (XOM), Chevron (CVX), BP (BP), ConocoPhillips (COP), and Shell (SHEL).
+Brown firms include: Exxon Mobil (XOM), Chevron (CVX), BP (BP), ConocoPhillips (COP), and Shell (SHEL). 
 
 Green firms include: NextEra Energy (NEE), Tesla (TSLA), Enphase Energy (ENPH), Brookfield Renewable Partners (BEP), and First Solar (FSLR).
 
@@ -79,21 +80,7 @@ for (ticker in green_tickers) {
 
 3.  Merge the adjusted closing prices for all stocks in each portfolio into individual data frames
 
-**lapply(brown_tickers, function(ticker) Ad(get(ticker))):**
-
--   `lapply()` iterates over each ticker in brown_tickers.
-
--   For each ticker, the function `get(ticker)` retrieves the stock data (including Open, High, Low, Close, Volume, and Adjusted Close prices).
-
--   `Ad()` then extracts just the Adjusted Close price for each stock, creating a list of Adjusted Close prices for each ticker in the brown portfolio.
-
-**do.call(merge, ...):**
-
--   `do.call()` applies the merge function across the list of Adjusted Close prices created by `lapply()`.
-
--   merge combines these individual Adjusted Close prices into a single data frame (`brown_prices`) where each column represents one stock’s Adjusted Close price, with dates aligned across all stocks.
-
-Adjusted Closing Prices: An adjusted closing price (ACP) is a modified closing price that takes into account events that impact a stock's value, such as dividends, stock splits, and rights offerings. The ACP is a more accurate representation of a stock's value than the closing price, which only shows what investors paid for shares at the end of a trading day. Insight to how the stock has changed over time.
+To compile adjusted closing prices for each stock in the portfolio, `lapply()` iterated through `brown_tickers`, retrieving each stock’s data and extracting only the Adjusted Close prices using `Ad()`. These prices were then combined into a single data frame (`brown_prices`) using `do.call(merge, ...)`, aligning dates across all stocks. The adjusted closing price (ACP) was used to account for corporate actions like dividends and stock splits, giving a more accurate reflection of each stock's value over time.This process was repeated for green firms, resulting in a similar data frame for their adjusted closing prices.
 
 ```{r}
 # Combine adjusted closing prices for each portfolio
@@ -105,24 +92,7 @@ green_prices <- do.call(merge, lapply(green_tickers, function(ticker) Ad(get(tic
 
 4.  Calculate daily returns for each portfolio
 
--   **Daily return =** The calculated daily returns for each stock in the portfolio represent the percentage change in the stock's price from one day to the next. Each entry in the daily returns data frame shows the percentage change between the Adjusted Close price of one day and the previous day. Insight into daily performance. Daily returns are essential for calculating volatility.
-
-```{r}
-brown_returns <- na.omit(ROC(brown_prices, type = "discrete"))
-green_returns <- na.omit(ROC(green_prices, type = "discrete"))
-
-
-```
-
-Calculates the daily returns for each portfolio using the Rate of Change (ROC) function.
-
-**Function Definition:** The `ROC()` function calculates the rate of change (returns) between the current price and the previous price in a time series.
-
-**Parameters:**
-
--   **Input:** The function takes a time series of prices as input, specifically the data frames `brown_prices` and `green_prices`, which contain the Adjusted Close prices for the respective portfolios.
-
--   **Type:** The parameter `type = "discrete"` specifies the method of return calculation. When set to "discrete," the function computes returns using the following formula:
+Daily returns were calculated for each stock in both portfolios to analyze their day-to-day performance. The daily return represents the percentage change in the Adjusted Close price from one day to the next, providing insights into daily fluctuations and enabling the assessment of volatility. This calculation was performed using the ROC() function, which calculates the rate of change in prices. Specifically, the function took the data frames brown_prices and green_prices as inputs, with the parameter type = "discrete" ensuring returns were calculated using the formula:
 
 $$
     \text{Return} = \frac{P_t - P_{t-1}}{P_{t-1}} = \frac{P_t}{P_{t-1}} - 1
@@ -133,28 +103,30 @@ where:
 -   Pt is the current price (Adjusted Close price at time t)
 -   Pt-1 is the previous price (Adjusted Close price at time t-1)
 
-5.  Calculate Annualized Mean Returns for Each Portfolio
-
-Find the annual mean returns for each portfolio by taking the mean of the daily returns and multiplying by 252 (the approx. number of trading days in a year)
 
 ```{r}
-#calculate annualized mean returns for each portfolio
+brown_returns <- na.omit(ROC(brown_prices, type = "discrete"))
+green_returns <- na.omit(ROC(green_prices, type = "discrete"))
+```
+
+
+5.  Calculate Annualized Mean Returns for Each Portfolio
+
+To assess annual performance, the mean daily returns for each portfolio were calculated and annualized by multiplying by 252, reflecting the typical number of trading days in a year. 
+
+```{r}
+#calculate annual mean returns for each portfolio
 brown_avg_return <- mean(brown_returns) * 252
 green_avg_return <- mean(green_returns) * 252
-
 
 ```
 
 6.  Adjusted Standard Deviations for Monthly Returns
 
-The standard deviations for monthly returns are calculated by dividing the annual standard deviation by the square root of 12. This adjustment reflects the compounding effect of volatility over time, as it translates annual risk into a monthly context. By defining the standard deviation for each portfolio, we account for the reality that returns fluctuate, which is essential for simulating random monthly returns and assessing potential risks associated with the investments.
-
-The standard deviation of monthly returns is calculated by dividing the annual standard deviation by the square root of 12 (the number of months in a year). This adjustment accounts for the compounding effect of volatility over time. -- does this make sense?
-
--   **figure out what the standard deviation of the monthly returns should be for each portfolio**
+The standard deviation of monthly returns for each portfolio was derived by adjusting the annual standard deviation. This adjustment, achieved by dividing the annual standard deviation by the square root of 12, accounts for the compounding effect of volatility over time, translating annual risk into a monthly context. By defining the standard deviation for each portfolio in monthly terms, we provide a realistic measure of return fluctuation, essential for simulating random monthly returns and assessing investment risk.
 
 ```{r}
-#adjusted standard deviations for monthly returns (update SD to reflect true SD)
+#adjusted standard deviations for monthly returns
 brown_sd_og <- sd(brown_returns)
 green_sd_og <- sd(green_returns)
 
@@ -165,7 +137,7 @@ green_sd <- green_sd_og / sqrt(12)
 
 # Set up the For Loop
 
-7.  Specify variables for the model:
+7.  Specify parameters for the model:
 
 ```{r}
 #set up initial variables
@@ -198,23 +170,12 @@ results <- data.frame(
 
 9.  Create a loop to run 100 investing scenarios over a 5 year time period:
 
--   Each loop represents a unique investment scenario characterized by different random allocations and returns. For each iteration, a random allocation for brown stocks is generated using `runif(1, 0, 1)`, while the remaining portion is allocated to green stocks.
+To simulate portfolio growth across 100 different scenarios, a loop was created to iterate until `i` reached `n_scenarios` (100). In each iteration, a random allocation to brown stocks was generated using `runif(1, 0, 1)`, with the remainder allocated to green stocks. Monthly returns for each portfolio were generated using the `rnorm()` function, with parameters including the average monthly return (calculated by dividing the annual return by 12) and the standard deviation. 
 
--   The simulation models monthly returns for each portfolio using a normal distribution with parameters:
-
-    -   `n_months` (the total number of months)
-
-    -   `brown_avg_return / 12` (the mean monthly return for brown stocks)
-
-    -   `brown_sd` (the standard deviation for brown stocks)
-
--   The portfolio value is initialized to the initial investment, followed by a nested loop that iterates through each month of the simulation for a total of 60 months. During each month, the weighted monthly return is calculated based on the portfolio allocations, and the portfolio value is updated.
-
--   The total return on investment is computed as a fraction of the initial investment, giving us insights into the portfolio's performance over time.
+The initial investment was updated over 5 months by calculating a weighted monthly return, based on the allocated portions for each portfolio. This return was applied to the portfolio value, compounding over time. At the end of each scenario, the cumulative return was calculated as a fraction of the initial investment, representing total growth for that scenario.
 
 ```{r}
-#run scenarios with a loop
-#loop repeats until i equals n_scenarios (100)
+#run scenarios with a loop that repeats until i equals n_scenarios (100)
 
 for (i in 1:n_scenarios) {
   
@@ -287,7 +248,7 @@ green_plot
 
 ```
 
-Some sort of environmental aspect:
+# Environmental Cost
 Use an emissions factor to estimate average CO₂ emissions per dollar invested in different sectors
 
 ```{r}
@@ -322,13 +283,19 @@ Use an emissions factor to estimate average CO₂ emissions per dollar invested 
 
 ^^^^ this didnt work how I wanted it to
 
+
+Simulate incorporated environmental costs by calculating carbon emissions based on portfolio allocations. Using an emissions factor of 0.002 tonnes CO₂ per dollar for brown investments and 0.0007 for green, emissions were calculated as the product of the allocation and emissions factor. The total emissions were then multiplied by the Social Cost of Carbon (SCC), set at $185 per tonne, to estimate the environmental cost. 
+
+The emission factors were calculated by taking a company's total emissions across Scope 1, 2, and 3 for 2023 and dividing them by the company's revenue for the same period.
+
+
 ```{r}
 # Parameters for environmental impact (amended code from above)
 SCC <- 185  # Social Cost of Carbon in USD per tonne (this could be updated as needed)
-emissions_factor_brown <- 0.001  # Emissions factor for brown investments: tonnes CO₂ per dollar invested
-emissions_factor_green <- 0.0003  # Emissions factor for green investments: tonnes CO₂ per dollar invested
+emissions_factor_brown <- 0.002  # Emissions factor for brown investments: tonnes CO₂ per dollar invested
+emissions_factor_green <- 0.0007  # Emissions factor for green investments: tonnes CO₂ per dollar invested
 
-# Initialize an empty data frame for storing results including environmental impacts
+# Initialize data frame for storing results w/ environmental impacts
 results <- data.frame(
   scenario = integer(),
   brown_allocation = numeric(),
