@@ -42,7 +42,7 @@ end_date <- "2023-12-31"
 
 2.  Build portfolios of brown and green firms.
 
-Brown firms include: Exxon Mobil (XOM), Chevron (CVX), BP (BP), ConocoPhillips (COP), and Shell (SHEL). 
+Brown firms include: Exxon Mobil (XOM), Chevron (CVX), BP (BP), ConocoPhillips (COP), and Shell (SHEL).
 
 Green firms include: NextEra Energy (NEE), Tesla (TSLA), Enphase Energy (ENPH), Brookfield Renewable Partners (BEP), and First Solar (FSLR).
 
@@ -103,16 +103,14 @@ where:
 -   Pt is the current price (Adjusted Close price at time t)
 -   Pt-1 is the previous price (Adjusted Close price at time t-1)
 
-
 ```{r}
 brown_returns <- na.omit(ROC(brown_prices, type = "discrete"))
 green_returns <- na.omit(ROC(green_prices, type = "discrete"))
 ```
 
-
 5.  Calculate Annualized Mean Returns for Each Portfolio
 
-To assess annual performance, the mean daily returns for each portfolio were calculated and annualized by multiplying by 252, reflecting the typical number of trading days in a year. 
+To assess annual performance, the mean daily returns for each portfolio were calculated and annualized by multiplying by 252, reflecting the typical number of trading days in a year.
 
 ```{r}
 #calculate annual mean returns for each portfolio
@@ -170,7 +168,7 @@ results <- data.frame(
 
 9.  Create a loop to run 100 investing scenarios over a 5 year time period:
 
-To simulate portfolio growth across 100 different scenarios, a loop was created to iterate until `i` reached `n_scenarios` (100). In each iteration, a random allocation to brown stocks was generated using `runif(1, 0, 1)`, with the remainder allocated to green stocks. Monthly returns for each portfolio were generated using the `rnorm()` function, with parameters including the average monthly return (calculated by dividing the annual return by 12) and the standard deviation. 
+To simulate portfolio growth across 100 different scenarios, a loop was created to iterate until `i` reached `n_scenarios` (100). In each iteration, a random allocation to brown stocks was generated using `runif(1, 0, 1)`, with the remainder allocated to green stocks. Monthly returns for each portfolio were generated using the `rnorm()` function, with parameters including the average monthly return (calculated by dividing the annual return by 12) and the standard deviation.
 
 The initial investment was updated over 5 months by calculating a weighted monthly return, based on the allocated portions for each portfolio. This return was applied to the portfolio value, compounding over time. At the end of each scenario, the cumulative return was calculated as a fraction of the initial investment, representing total growth for that scenario.
 
@@ -249,6 +247,7 @@ green_plot
 ```
 
 # Environmental Cost
+
 Use an emissions factor to estimate average CO₂ emissions per dollar invested in different sectors
 
 ```{r}
@@ -281,13 +280,11 @@ Use an emissions factor to estimate average CO₂ emissions per dollar invested 
 
 ```
 
-^^^^ this didnt work how I wanted it to
+\^\^\^\^ this didnt work how I wanted it to
 
-
-Simulate incorporated environmental costs by calculating carbon emissions based on portfolio allocations. Using an emissions factor of 0.002 tonnes CO₂ per dollar for brown investments and 0.0007 for green, emissions were calculated as the product of the allocation and emissions factor. The total emissions were then multiplied by the Social Cost of Carbon (SCC), set at $185 per tonne, to estimate the environmental cost. 
+Simulate incorporated environmental costs by calculating carbon emissions based on portfolio allocations. Using an emissions factor of 0.002 tonnes CO₂ per dollar for brown investments and 0.0007 for green, emissions were calculated as the product of the allocation and emissions factor. The total emissions were then multiplied by the Social Cost of Carbon (SCC), set at \$185 per tonne, to estimate the environmental cost.
 
 The emission factors were calculated by taking a company's total emissions across Scope 1, 2, and 3 for 2023 and dividing them by the company's revenue for the same period.
-
 
 ```{r}
 # Parameters for environmental impact (amended code from above)
@@ -387,8 +384,6 @@ green_environmental_cost_plot
 
 ```
 
-
-
 -   1\. Sector-Specific Emissions factor Data
 
     Many organizations and studies provide emissions intensity data by sector, measured in tonnes of CO₂ per unit of revenue, production, or value invested. High-emissions sectors typically include energy (especially fossil fuels), utilities, materials, and transportation, while green sectors often include renewable energy, technology with low environmental impact, and environmentally-focused industries.
@@ -404,3 +399,7 @@ green_environmental_cost_plot
 -   To find emissions per dollar invested, take the company’s total emissions and divide it by its market capitalization or revenue.
 
 -   For example, if a company in the energy sector emits 10 million tonnes of CO₂ annually and has a market cap of \$100 billion, you might calculate an approximate emissions rate of 100,000,000,000dollars/10,000,000tonnes​=0.0001tonnes CO₂ per dollar invested.
+
+```{r}
+
+```
