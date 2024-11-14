@@ -16,14 +16,6 @@ execute:
   warning: false
 ---
 
-# Questions:
-
--   What are the uncertainties in this model?
--   Should we be using the SCC in this model?
--   Maybe probability is accounted for in the model but randomly distributing the allocation of?
--   How to incorporate code?
--   How do we tie the environmental benefits into this?
-
 ```{r}
 library(tidyverse)
 library(here)
