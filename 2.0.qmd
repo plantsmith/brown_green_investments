@@ -211,3 +211,129 @@ ggplot(results, aes(x = total_environmental_cost, y = total_return, size = total
 ```
 
 A scatter plot is created using ggplot2. x = carbon: Carbon intensity. y = return: Portfolio return. size = volatility: The size of the points represents the volatility of the portfolio. color = carbon_cost: The color of the points indicates the carbon cost associated with the portfolio. The plot helps visualize the trade-offs between carbon intensity, return, and the associated environmental costs.
+
+```{r}
+# # # Initialize results list to store each scenario's data before combining
+# results_list <- vector("list", n_scenarios)
+# 
+# # Run scenarios to simulate random allocation
+# for (i in 1:n_scenarios) {
+#   allocation <- runif(length(tickers))  # Random allocation for each company
+#   allocation <- allocation / sum(allocation)  # Normalize to sum to 1
+#   
+#   # Generate monthly returns for each company
+#   company_monthly_returns <- matrix(rnorm(n_months * length(tickers), avg_return / 12, sd), 
+#                                     nrow = n_months, ncol = length(tickers))
+#   
+#   # Initialize portfolio value and returns
+#   portfolio_value <- initial_investment
+#   monthly_portfolio_returns <- numeric(n_months)
+#   
+#   # Track individual company returns
+#   company_final_returns <- numeric(length(tickers))
+#   
+#   # Calculate emissions and environmental costs
+#   emissions <- initial_investment * allocation * emissions_intensity
+#   environmental_cost_allocation <- emissions * SCC
+#   
+#   # Update portfolio value based on monthly returns and allocation
+#   for (j in 1:n_months) {
+#     # For each company, calculate individual company returns
+#     company_returns_at_j <- company_monthly_returns[j, ]  # Returns for all companies at month j
+#     company_final_returns <- company_final_returns + company_returns_at_j * allocation  # Accumulated return by company
+#     
+#     # Calculate portfolio monthly return
+#     portfolio_monthly_return <- sum(company_returns_at_j * allocation)
+#     portfolio_value <- portfolio_value * (1 + portfolio_monthly_return)
+#     monthly_portfolio_returns[j] <- portfolio_monthly_return
+#   }
+#   
+#   # Calculate cumulative return for individual companies
+#   total_return <- (portfolio_value - initial_investment) / initial_investment
+#   total_enviro_cost_scenario <- sum(environmental_cost_allocation)  # Total environmental cost
+#   
+#   # Store results for individual company returns and portfolio return
+#   results_list[[i]] <- data.frame(
+#     scenario = i,
+#     company = tickers,
+#     allocation = allocation,
+#     final_portfolio_value = portfolio_value,
+#     total_return = total_return,
+#     company_final_return = company_final_returns,  # Store individual company returns
+#     emissions = emissions,
+#     environmental_cost_allocation = environmental_cost_allocation,
+#     total_enviro_cost_scenario = total_enviro_cost_scenario  # Total environmental cost
+#   )
+# }
+# 
+# # Combine all results from all scenarios
+# results <- do.call(rbind, results_list)
+
+
+```
+
+```{r}
+
+# Initialize results list to store each scenario's data before combining
+# results_list <- vector("list", n_scenarios)
+# 
+# # Run scenarios to simulate random allocation
+# for (i in 1:n_scenarios) {
+#   allocation <- runif(length(tickers))  # Random allocation for each company
+#   allocation <- allocation / sum(allocation)  # Normalize to sum to 1
+# 
+#   # Generate monthly returns for the companies (using rnorm for each company)
+#   company_monthly_returns <- matrix(rnorm(n_months * length(tickers), avg_return / 12, sd),
+#                                     nrow = n_months, ncol = length(tickers))
+#   portfolio_value <- initial_investment
+#   monthly_portfolio_returns <- numeric(n_months)
+# 
+#   # Initialize a vector to store individual company volatilities
+#   company_volatilities <- numeric(length(tickers))
+# 
+#   # Calculate emissions and environmental costs once per company
+#   emissions <- initial_investment * allocation * emissions_intensity
+#   environmental_cost_allocation <- emissions * SCC
+# 
+#   # Update portfolio value based on monthly returns and allocation
+#   for (j in 1:n_months) {
+#     # Calculate the total portfolio return for the month (weighted by allocation)
+#     portfolio_monthly_return <- sum(company_monthly_returns[j, ] * allocation)
+#     portfolio_value <- portfolio_value * (1 + portfolio_monthly_return)
+#     monthly_portfolio_returns[j] <- portfolio_monthly_return  # Record the return for this month
+#   }
+# 
+#   # Calculate cumulative return and total environmental cost
+#   total_return <- (portfolio_value - initial_investment) / initial_investment
+#   total_enviro_cost_scenario <- sum(environmental_cost_allocation)  # Renamed total environmental cost
+# 
+#   # Calculate volatility for each company (standard deviation of returns over time)
+#   for (k in 1:length(tickers)) {
+#     company_returns <- company_monthly_returns[, k]
+#     company_volatility <- sd(company_returns) * sqrt(12)  # Annualize volatility
+#     company_volatilities[k] <- company_volatility
+#   }
+# 
+#   # Calculate portfolio (scenario) volatility based on weighted returns
+#   portfolio_volatility <- sd(monthly_portfolio_returns) * sqrt(12)  # Annualize portfolio volatility
+# 
+#   # Store scenario results
+#   results_list[[i]] <- data.frame(
+#     scenario = i,
+#     company = tickers,
+#     allocation = allocation,
+#     final_portfolio_value = portfolio_value,
+#     total_return = total_return,
+#     emissions = emissions,
+#     environmental_cost_allocation = environmental_cost_allocation,
+#     total_enviro_cost_scenario = total_enviro_cost_scenario,  # Renamed column
+#     company_volatility = company_volatilities,  # Store volatility for each company
+#     scenario_volatility = portfolio_volatility  # Store volatility for the entire scenario (portfolio)
+#   )
+# }
+# 
+# # Combine all scenarios into a single data frame
+# results <- do.call(rbind, results_list)
+
+
+```

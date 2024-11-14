@@ -79,7 +79,8 @@ for (ticker in tickers) {
 
 3. Merge the adjusted closing prices for all stocks in each portfolio into individual data frames
 
-To compile adjusted closing prices for each stock in the portfolio, lapply() iterated through brown_tickers, retrieving each stock’s data and extracting only the Adjusted Close prices using Ad(). These prices were then combined into a single data frame (brown_prices) using do.call(merge, ...), aligning dates across all stocks. The adjusted closing price (ACP) was used to account for corporate actions like dividends and stock splits, giving a more accurate reflection of each stock's value over time.This process was repeated for green firms, resulting in a similar data frame for their adjusted closing prices.
+To compile adjusted closing prices for each stock in the portfolio, lapply() iterated through each ticker to retrieve stock data, extracting only Adjusted Close prices via Ad(). These prices were combined into a single data frame (prices) using do.call(merge, ...), aligning dates across stocks for consistency. Adjusted Close prices (ACP) reflect corporate actions like dividends and stock splits, providing a more accurate measure of each stock's value over time. 
+
 ```{r}
 # Merge adjusted closing prices for all tickers into a single data frame.
 prices <- do.call(merge, lapply(tickers, function(ticker) Ad(get(ticker))))
@@ -88,7 +89,7 @@ prices <- do.call(merge, lapply(tickers, function(ticker) Ad(get(ticker))))
 
 4.  Calculate daily returns for each portfolio
 
-Daily returns were calculated for each stock in both portfolios to analyze their day-to-day performance. The daily return represents the percentage change in the Adjusted Close price from one day to the next, providing insights into daily fluctuations and enabling the assessment of volatility. This calculation was performed using the ROC() function, which calculates the rate of change in prices. Specifically, the function took the data frames brown_prices and green_prices as inputs, with the parameter type = "discrete" ensuring returns were calculated using the formula:
+Daily returns were calculated for each stock in both portfolios to assess day-to-day performance. These returns, representing the percentage change in Adjusted Close price from one day to the next, were generated using the ROC() function with type = "discrete" ensuring returns were calculated using the formula:
 
 $$
     \text{Return} = \frac{P_t - P_{t-1}}{P_{t-1}} = \frac{P_t}{P_{t-1}} - 1
@@ -114,7 +115,7 @@ avg_return <- mean(returns) * 252
 
 6.  Adjusted Standard Deviations for Monthly Returns
 
-The standard deviation of monthly returns for each portfolio was derived by adjusting the annual standard deviation. This adjustment, achieved by dividing the annual standard deviation by the square root of 12, accounts for the compounding effect of volatility over time, translating annual risk into a monthly context. By defining the standard deviation for each portfolio in monthly terms, we provide a realistic measure of return fluctuation, essential for simulating random monthly returns and assessing investment risk.
+The monthly standard deviation of returns for each portfolio was calculated by dividing the annual standard deviation by the square root of 12, translating annual volatility into a monthly measure.
 
 ```{r}
 # Calculate monthly volatility (standard deviation of returns).
@@ -137,126 +138,79 @@ n_months <- 60  #simulation for 5 years (60 months)
 8.  Create a loop to run 100 investing scenarios over a 5 year time period:
 
 ```{r}
-# # Initialize results list to store each scenario's data before combining
-# results_list <- vector("list", n_scenarios)
-# 
-# # Run scenarios to simulate random allocation
-# for (i in 1:n_scenarios) {
-#   allocation <- runif(length(tickers))  # Random allocation for each company
-#   allocation <- allocation / sum(allocation)  # Normalize to sum to 1
-#   
-#   # Generate monthly returns for the companies (using rnorm for each company)
-#   company_monthly_returns <- matrix(rnorm(n_months * length(tickers), avg_return / 12, sd), 
-#                                     nrow = n_months, ncol = length(tickers))
-#   portfolio_value <- initial_investment
-#   monthly_portfolio_returns <- numeric(n_months)
-#   
-#   # Initialize a vector to store individual company volatilities
-#   company_volatilities <- numeric(length(tickers))
-# 
-#   # Calculate emissions and environmental costs once per company
-#   emissions <- initial_investment * allocation * emissions_intensity
-#   environmental_cost_allocation <- emissions * SCC
-# 
-#   # Update portfolio value based on monthly returns and allocation
-#   for (j in 1:n_months) {
-#     # Calculate the total portfolio return for the month (weighted by allocation)
-#     portfolio_monthly_return <- sum(company_monthly_returns[j, ] * allocation)
-#     portfolio_value <- portfolio_value * (1 + portfolio_monthly_return)
-#     monthly_portfolio_returns[j] <- portfolio_monthly_return  # Record the return for this month
-#   }
-#   
-#   # Calculate cumulative return and total environmental cost
-#   total_return <- (portfolio_value - initial_investment) / initial_investment
-#   total_enviro_cost_scenario <- sum(environmental_cost_allocation)  # Renamed total environmental cost
-#   
-#   # Calculate volatility for each company (standard deviation of returns over time)
-#   for (k in 1:length(tickers)) {
-#     company_returns <- company_monthly_returns[, k]
-#     company_volatility <- sd(company_returns) * sqrt(12)  # Annualize volatility
-#     company_volatilities[k] <- company_volatility
-#   }
-#   
-#   # Calculate portfolio (scenario) volatility based on weighted returns
-#   portfolio_volatility <- sd(monthly_portfolio_returns) * sqrt(12)  # Annualize portfolio volatility
-# 
-#   # Store scenario results
-#   results_list[[i]] <- data.frame(
-#     scenario = i,
-#     company = tickers,
-#     allocation = allocation,
-#     final_portfolio_value = portfolio_value,
-#     total_return = total_return,
-#     emissions = emissions,
-#     environmental_cost_allocation = environmental_cost_allocation,
-#     total_enviro_cost_scenario = total_enviro_cost_scenario,  # Renamed column
-#     company_volatility = company_volatilities,  # Store volatility for each company
-#     scenario_volatility = portfolio_volatility  # Store volatility for the entire scenario (portfolio)
-#   )
-# }
-# 
-# # Combine all scenarios into a single data frame
-# results <- do.call(rbind, results_list)
-
-```
-
-```{r}
-# # Initialize results list to store each scenario's data before combining
+# Initialize results list to store each scenario's data before combining
 results_list <- vector("list", n_scenarios)
 
 # Run scenarios to simulate random allocation
 for (i in 1:n_scenarios) {
   allocation <- runif(length(tickers))  # Random allocation for each company
   allocation <- allocation / sum(allocation)  # Normalize to sum to 1
-  
-  # Generate monthly returns for each company
-  company_monthly_returns <- matrix(rnorm(n_months * length(tickers), avg_return / 12, sd), 
+
+# Generate monthly returns for each company
+  company_monthly_returns <- matrix(rnorm(n_months * length(tickers), avg_return / 12, sd),
                                     nrow = n_months, ncol = length(tickers))
-  
-  # Initialize portfolio value and returns
+
+# Initialize portfolio value and returns
   portfolio_value <- initial_investment
   monthly_portfolio_returns <- numeric(n_months)
   
-  # Track individual company returns
+# Initialize a vector to store individual company volatilities
+  company_volatilities <- numeric(length(tickers))
+
+# Track individual company returns
   company_final_returns <- numeric(length(tickers))
-  
-  # Calculate emissions and environmental costs
+
+# Calculate emissions and environmental costs
+# initial investment ($) * allocation * emissions factor (metric tonnes CO2 per dollar invested) -  dollars cancel out leaving metric tonnes CO2
   emissions <- initial_investment * allocation * emissions_intensity
+# Calculate environmental cost
+# environmental cost ($) = emissions (metric tonnes CO2) * SCC (dollars per metric tonne) - metric tonnes cancel out leaveing $
   environmental_cost_allocation <- emissions * SCC
-  
+
   # Update portfolio value based on monthly returns and allocation
   for (j in 1:n_months) {
     # For each company, calculate individual company returns
     company_returns_at_j <- company_monthly_returns[j, ]  # Returns for all companies at month j
     company_final_returns <- company_final_returns + company_returns_at_j * allocation  # Accumulated return by company
-    
-    # Calculate portfolio monthly return
+
+# Calculate portfolio monthly return
     portfolio_monthly_return <- sum(company_returns_at_j * allocation)
     portfolio_value <- portfolio_value * (1 + portfolio_monthly_return)
     monthly_portfolio_returns[j] <- portfolio_monthly_return
   }
-  
-  # Calculate cumulative return for individual companies
+
+# Calculate cumulative return for individual companies
   total_return <- (portfolio_value - initial_investment) / initial_investment
   total_enviro_cost_scenario <- sum(environmental_cost_allocation)  # Total environmental cost
   
-  # Store results for individual company returns and portfolio return
+# Calculate volatility for each company (standard deviation of returns over time)
+  for (k in 1:length(tickers)) {
+    company_returns <- company_monthly_returns[, k]
+    company_volatility <- sd(company_returns) * sqrt(12)  # Annualize volatility
+    company_volatilities[k] <- company_volatility
+  }
+
+# Calculate portfolio (scenario) volatility based on weighted returns
+  portfolio_volatility <- sd(monthly_portfolio_returns) * sqrt(12)  # Annualize portfolio volatility
+
+# Store results for individual company returns and portfolio return
   results_list[[i]] <- data.frame(
     scenario = i,
     company = tickers,
     allocation = allocation,
     final_portfolio_value = portfolio_value,
     total_return = total_return,
-    company_final_return = company_final_returns,  # Store individual company returns
+    company_final_return = company_final_returns,  
     emissions = emissions,
     environmental_cost_allocation = environmental_cost_allocation,
-    total_enviro_cost_scenario = total_enviro_cost_scenario  # Total environmental cost
+    total_enviro_cost_scenario = total_enviro_cost_scenario,
+    company_volatility = company_volatilities,  
+    scenario_volatility = portfolio_volatility  
   )
 }
 
 # Combine all results from all scenarios
 results <- do.call(rbind, results_list)
-
 ```
 
 
@@ -295,8 +249,16 @@ Volatility was calculated in two ways: first, the individual company volatility 
    A statistical measure of the variation in the portfolio's returns over a given period, reflecting the level of risk associated with the portfolio. High volatility indicates significant fluctuations in returns, signifying higher risk, while low volatility means the portfolio's returns are more stable and predictable.  
    Volatility is calculated based on the standard deviation of monthly returns, annualized by multiplying by the square root of 12. This measure helps investors assess the uncertainty or risk associated with the portfolio's performance.
 
+# Plots
+
+```{r}
+# List of green and brown companies
+green_firms <- c("NEE", "TSLA", "ENPH", "BEP", "FSLR")
+brown_firms <- c("XOM", "CVX", "BP", "COP", "SHEL")
+```
 
 
+Individual returns for each company 
 
 ```{r}
 # Summarize the company returns across all scenarios
@@ -304,46 +266,66 @@ company_returns_summary <- results %>%
   group_by(company) %>%
   summarise(mean_company_return = mean(company_final_return)) %>%
   arrange(desc(mean_company_return))  # Sort by average return
+```
 
-# Plot the individual returns for each company
-ggplot(company_returns_summary, aes(x = reorder(company, mean_company_return), y = mean_company_return, fill = company)) +
+```{r}
+# Add a new column to classify the companies as 'green' or 'brown'
+company_returns_summary$firm_type <- ifelse(company_returns_summary$company %in% green_firms, "Green", ifelse(company_returns_summary$company %in% brown_firms, "Brown", "Other"))
+
+# Plot the individual returns for each company with green and brown color coding
+ggplot(company_returns_summary, aes(x = reorder(company, mean_company_return), y = mean_company_return, fill = firm_type)) +
   geom_bar(stat = "identity") +
+  scale_fill_manual(values = c("Green" = "seagreen", "Brown" = "peachpuff4", "Other" = "gray")) +  # Green for green firms, Brown for brown firms
   labs(title = "Average Company Return Across Scenarios", 
        x = "Company", y = "Average Return") +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 90, hjust = 1))  # Rotate labels for readability
 
+
 ```
 
 ```{r}
-library(ggplot2)
-library(dplyr)
-
 # Summarize environmental cost allocation by company across all scenarios
-ggplot(results %>%
-         group_by(company) %>%
-         summarise(total_enviro_cost = sum(environmental_cost_allocation)), 
-       aes(x = company, y = total_enviro_cost, fill = company)) +
-  geom_bar(stat = "identity") +  # Use pre-summarized values
-  labs(title = "Environmental Cost Allocation by Company Across Scenarios", 
+enviro_cost_summary <- results %>%
+  group_by(company) %>%
+  summarise(total_enviro_cost = sum(environmental_cost_allocation))
+
+# Add firm type to environmental cost data
+enviro_cost_summary$firm_type <- ifelse(enviro_cost_summary$company %in% green_firms, "Green", ifelse(enviro_cost_summary$company %in% brown_firms, "Brown", "Other"))
+
+# Plot environmental cost allocation by company
+ggplot(enviro_cost_summary, aes(x = reorder(company, total_enviro_cost), y = total_enviro_cost, fill = firm_type)) +
+  geom_bar(stat = "identity") + 
+  scale_fill_manual(values = c("Green" = "seagreen", "Brown" = "peachpuff4", "Other" = "gray")) +  # Green for green firms, Brown for brown firms
+  labs(title = "Total Environmental Cost Allocation by Company Across Scenarios", 
        x = "Company", y = "Total Environmental Cost Allocation") +
   theme_minimal() +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1))  # Rotate x-axis labels if needed
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))  # Rotate labels for readability
 
 ```
-
 ```{r}
-# Plot Scenario (Portfolio) Volatility Distribution
-ggplot(results, aes(x = scenario_volatility)) +
-  geom_histogram(binwidth = 0.05, fill = "orange", color = "black", alpha = 0.7) +
-  labs(title = "Scenario (Portfolio) Volatility Distribution Across Scenarios", x = "Portfolio Volatility (Annualized)", y = "Frequency") +
-  theme_minimal()
+# Summarize results for each company across all scenarios
+company_summary <- results %>%
+  group_by(company) %>%
+  summarise(
+    mean_return = mean(company_final_return),        # Average return
+    mean_enviro_cost = mean(environmental_cost_allocation),  # Average environmental cost
+    mean_volatility = mean(company_volatility)       # Average volatility
+  )
 
+# Create the plot
+ggplot(company_summary, aes(x = mean_enviro_cost, y = mean_return, size = mean_volatility, color = company)) +
+  geom_point(alpha = 0.7) +
+  labs(
+    title = "Company Returns vs Environmental Cost with Volatility",
+    x = "Average Environmental Cost",
+    y = "Average Company Return",
+    size = "Volatility"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "right")
 
 ```
-
-
-```{r}
 
 
 ```
