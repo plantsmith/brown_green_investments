@@ -40,23 +40,23 @@ end_date <- "2023-12-31"
 
 Brown firms include: Exxon Mobil (XOM), Chevron (CVX), BP (BP), ConocoPhillips (COP), and Shell (SHEL).
 
-Green firms include: NextEra Energy (NEE), Tesla (TSLA), Enphase Energy (ENPH), Brookfield Renewable Partners (BEP), and First Solar (FSLR).
+Green firms include: NextEra Energy (NEE), Iberdrola (IBDRY), Enphase Energy (ENPH), Brookfield Renewable Partners (BEP), and First Solar (FSLR).
 
 Carbon intensity was calculated by taking a company's total emissions across Scope 1, 2, and 3 for 2023 and dividing them by the company's revenue for the same period. Measured in tonnes of CO2 per unit of revenue
 
 ```{r}
 # Define company tickers
-tickers <- c("XOM", "CVX", "BP", "COP", "SHEL", "NEE", "TSLA", "ENPH", "BEP", "FSLR")
+tickers <- c("XOM", "CVX", "BP", "COP", "SHEL", "NEE", "IBDRY", "ENPH", "BEP", "FSLR")
 
 # Define carbon intensities for each company (in tonnes of CO2 per unit of revenue)
 emissions_intensity  <- c(
   XOM = 0.002,     # Exxon Mobil
   CVX = 0.008,    # Chevron
   BP = 0.002,     # BP
-  COP = 0.003,    # ConocoPhillips
-  SHEL = 0.006,    # Shell
+  COP = 0.004,    # ConocoPhillips
+  SHEL = 0.004,    # Shell
   NEE = 0.002,     # NextEra Energy
-  TSLA = 0.00002,    # UPDATE
+  IBDRY = 0.001,    
   ENPH = 0.00003,  # Enphase Energy
   BEP = 0.000005,  # Brookfield Renewable Partners
   FSLR = 0.0013    # First Solar
@@ -92,7 +92,7 @@ prices <- do.call(merge, lapply(tickers, function(ticker) Ad(get(ticker))))
 Daily returns were calculated for each stock in both portfolios to assess day-to-day performance. These returns, representing the percentage change in Adjusted Close price from one day to the next, were generated using the ROC() function with type = "discrete" ensuring returns were calculated using the formula:
 
 $$
-    \text{Return} = \frac{P_t - P_{t-1}}{P_{t-1}} = \frac{P_t}{P_{t-1}} - 1
+ 
 $$
 
 where:
@@ -214,11 +214,7 @@ results <- do.call(rbind, results_list)
 ```
 
 
-A Monte Carlo simulation was conducted to analyze the environmental and financial outcomes of various random portfolio allocations across companies. For each scenario, a random allocation of investment across companies was generated and normalized to sum to one. Monthly returns for each company were then simulated using a normal distribution, with specified mean and standard deviation. These simulated monthly returns were applied to the portfolio by updating the portfolio value each month based on the returns and the respective company allocation.
-
-Emissions for each company were calculated based on the initial investment amount, company allocation, and an emissions intensity factor. The associated environmental cost was derived by applying the Social Cost of Carbon (SCC) to the emissions. The cumulative return for the portfolio was calculated as the final portfolio value relative to the initial investment, while individual company returns were calculated separately, taking into account the unique investment allocations and the monthly returns of each company.
-
-Volatility was calculated in two ways: first, the individual company volatility was derived by computing the standard deviation of monthly returns for each company, annualized by multiplying by the square root of 12. Second, the portfolio (scenario) volatility was calculated by measuring the standard deviation of the total portfolio returns across all companies, also annualized. The total environmental cost for each scenario was calculated by summing the environmental costs for all companies in the portfolio.
+Monte Carlo simulations were conducted to model financial and environmental outcomes across 100 randomized scenarios over a 5-year period (60 months), starting with an initial investment of $10,000. Monthly returns for each company were generated using a normal distribution based on historical average returns and standard deviations. In each scenario, allocations were randomly assigned across the 10 companies, and monthly returns were applied accordingly. At the end of each simulation, cumulative returns were determined by calculating the difference between the final portfolio value and the initial investment and then expressing it as a percentage of the initial investment. Emissions were calculated by multiplying each company’s initial investment by its allocation fraction and emissions intensity. The environmental costs were then determined by multiplying the calculated emissions by the Social Cost of Carbon (SCC). Volatility was calculated at both the company and portfolio levels by annualizing the standard deviation of monthly returns, with the portfolio’s volatility representing the combined risk of all companies.
 
 ---
 
@@ -253,13 +249,11 @@ Volatility was calculated in two ways: first, the individual company volatility 
 
 ```{r}
 # List of green and brown companies
-green_firms <- c("NEE", "TSLA", "ENPH", "BEP", "FSLR")
+green_firms <- c("NEE", "IBDRY", "ENPH", "BEP", "FSLR")
 brown_firms <- c("XOM", "CVX", "BP", "COP", "SHEL")
 ```
 
-
 Individual returns for each company 
-
 ```{r}
 # Summarize the company returns across all scenarios
 company_returns_summary <- results %>%
@@ -273,14 +267,18 @@ company_returns_summary <- results %>%
 company_returns_summary$firm_type <- ifelse(company_returns_summary$company %in% green_firms, "Green", ifelse(company_returns_summary$company %in% brown_firms, "Brown", "Other"))
 
 # Plot the individual returns for each company with green and brown color coding
-ggplot(company_returns_summary, aes(x = reorder(company, mean_company_return), y = mean_company_return, fill = firm_type)) +
+company_plot <- ggplot(company_returns_summary, aes(x = reorder(company, mean_company_return), y = mean_company_return, fill = firm_type)) +
   geom_bar(stat = "identity") +
-  scale_fill_manual(values = c("Green" = "seagreen", "Brown" = "peachpuff4", "Other" = "gray")) +  # Green for green firms, Brown for brown firms
-  labs(title = "Average Company Return Across Scenarios", 
-       x = "Company", y = "Average Return") +
+  scale_fill_manual(values = c("Green" = "seagreen", 
+                               "Brown" = "peachpuff4")) +  
+  labs(title = "Mean Company Return Across Scenarios", 
+       x = "Company", 
+       y = "Mean Return",
+      fill = "Firm Type") +
   theme_minimal() +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1))  # Rotate labels for readability
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) 
 
+ggsave("Mean_Company_Return_Across_Scenarios.png", plot = company_plot, width = 10, height = 6, dpi = 300)
 
 ```
 
@@ -294,15 +292,32 @@ enviro_cost_summary <- results %>%
 enviro_cost_summary$firm_type <- ifelse(enviro_cost_summary$company %in% green_firms, "Green", ifelse(enviro_cost_summary$company %in% brown_firms, "Brown", "Other"))
 
 # Plot environmental cost allocation by company
-ggplot(enviro_cost_summary, aes(x = reorder(company, total_enviro_cost), y = total_enviro_cost, fill = firm_type)) +
+environmental_plot <- ggplot(enviro_cost_summary, aes(x = reorder(company, total_enviro_cost), y = total_enviro_cost, fill = firm_type)) +
   geom_bar(stat = "identity") + 
-  scale_fill_manual(values = c("Green" = "seagreen", "Brown" = "peachpuff4", "Other" = "gray")) +  # Green for green firms, Brown for brown firms
+  scale_fill_manual(values = c("Green" = "seagreen",
+                               "Brown" = "peachpuff4")) +  
   labs(title = "Total Environmental Cost Allocation by Company Across Scenarios", 
-       x = "Company", y = "Total Environmental Cost Allocation") +
+       x = "Company",
+       y = "Total Environmental Cost Allocation",
+       fill = "Firm Type") +
   theme_minimal() +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1))  # Rotate labels for readability
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))  
+
+ggsave("Total_Environmental_Costs.png", plot = environmental_plot, width = 10, height = 6, dpi = 300)
 
 ```
+
+```{r}
+#patchwork package to combine plots
+library(patchwork)
+
+# Combine the two plots
+combined_plots <- company_plot + environmental_plot
+
+combined_plots 
+```
+
+
 ```{r}
 # Summarize results for each company across all scenarios
 company_summary <- results %>%
