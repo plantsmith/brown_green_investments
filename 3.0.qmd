@@ -63,7 +63,6 @@ emissions_intensity  <- c(
 SCC <- 185
 ```
 
-
 ```{r}
 #get data to build portfolios
 #getSymbols = fetches historical stock data for these tickers from Yahoo Finance
@@ -74,9 +73,9 @@ for (ticker in tickers) {
 
 ```
 
-3. Merge the adjusted closing prices for all stocks in each portfolio into individual data frames
+3.  Merge the adjusted closing prices for all stocks in each portfolio into individual data frames
 
-To compile adjusted closing prices for each stock in the portfolio, lapply() iterated through each ticker to retrieve stock data, extracting only Adjusted Close prices via Ad(). These prices were combined into a single data frame (prices) using do.call(merge, ...), aligning dates across stocks for consistency. Adjusted Close prices (ACP) reflect corporate actions like dividends and stock splits, providing a more accurate measure of each stock's value over time. 
+To compile adjusted closing prices for each stock in the portfolio, lapply() iterated through each ticker to retrieve stock data, extracting only Adjusted Close prices via Ad(). These prices were combined into a single data frame (prices) using do.call(merge, ...), aligning dates across stocks for consistency. Adjusted Close prices (ACP) reflect corporate actions like dividends and stock splits, providing a more accurate measure of each stock's value over time.
 
 ```{r}
 # Merge adjusted closing prices for all tickers into a single data frame.
@@ -88,9 +87,9 @@ prices <- do.call(merge, lapply(tickers, function(ticker) Ad(get(ticker))))
 
 Daily returns were calculated for each stock in both portfolios to assess day-to-day performance. These returns, representing the percentage change in Adjusted Close price from one day to the next, were generated using the ROC() function with type = "discrete" ensuring returns were calculated using the formula:
 
-$$
- 
-$$
+\$\$
+
+\$\$
 
 where:
 
@@ -105,6 +104,7 @@ returns <- na.omit(ROC(prices, type = "discrete"))
 5.  Calculate Annualized Mean Returns for Each Portfolio
 
 To assess annual performance, the mean daily returns for each portfolio were calculated and annualized by multiplying by 252, reflecting the typical number of trading days in a year.
+
 ```{r}
 # Calculate annualized average return.
 avg_return <- mean(returns) * 252
@@ -211,37 +211,36 @@ results <- do.call(rbind, results_list)
 
 ```
 
+Monte Carlo simulations were conducted to model financial and environmental outcomes across 100 randomized scenarios over a 5-year period (60 months), starting with an initial investment of \$10,000. Monthly returns for each company were generated using a normal distribution based on historical average returns and standard deviations. In each scenario, allocations were randomly assigned across the 10 companies, and monthly returns were applied accordingly. At the end of each simulation, cumulative returns were determined by calculating the difference between the final portfolio value and the initial investment and then expressing it as a percentage of the initial investment. Emissions were calculated by multiplying each company’s initial investment by its allocation fraction and emissions intensity. The environmental costs were then determined by multiplying the calculated emissions by the Social Cost of Carbon (SCC). Volatility was calculated at both the company and portfolio levels by annualizing the standard deviation of monthly returns, with the portfolio’s volatility representing the combined risk of all companies.
 
-Monte Carlo simulations were conducted to model financial and environmental outcomes across 100 randomized scenarios over a 5-year period (60 months), starting with an initial investment of $10,000. Monthly returns for each company were generated using a normal distribution based on historical average returns and standard deviations. In each scenario, allocations were randomly assigned across the 10 companies, and monthly returns were applied accordingly. At the end of each simulation, cumulative returns were determined by calculating the difference between the final portfolio value and the initial investment and then expressing it as a percentage of the initial investment. Emissions were calculated by multiplying each company’s initial investment by its allocation fraction and emissions intensity. The environmental costs were then determined by multiplying the calculated emissions by the Social Cost of Carbon (SCC). Volatility was calculated at both the company and portfolio levels by annualizing the standard deviation of monthly returns, with the portfolio’s volatility representing the combined risk of all companies.
+------------------------------------------------------------------------
 
----
+1.  **Allocation**:\
+    The percentage of the total investment allocated to each company, normalized so that the sum of all allocations equals 1. This allocation determines the proportion of the total investment assigned to each company in the portfolio.
 
-1. **Allocation**:  
-   The percentage of the total investment allocated to each company, normalized so that the sum of all allocations equals 1. This allocation determines the proportion of the total investment assigned to each company in the portfolio.
+2.  **Final Portfolio Value**:\
+    The total value of the investment portfolio at the end of the simulation period, accounting for all monthly returns and any compounding effects. Starting from an initial investment, the portfolio’s value is updated each month based on simulated returns. This value reflects the cumulative growth (or loss) of the initial investment, considering the compounding of monthly returns.\
+    *Example*: If the final portfolio value were \$43,533.58, this means that at the end of the simulation period (e.g., 12 months or 5 years), the portfolio's value has grown to \$43,533.58 from the initial investment.
 
-2. **Final Portfolio Value**:  
-   The total value of the investment portfolio at the end of the simulation period, accounting for all monthly returns and any compounding effects. Starting from an initial investment, the portfolio’s value is updated each month based on simulated returns. This value reflects the cumulative growth (or loss) of the initial investment, considering the compounding of monthly returns.  
-   *Example*: If the final portfolio value were $43,533.58, this means that at the end of the simulation period (e.g., 12 months or 5 years), the portfolio's value has grown to $43,533.58 from the initial investment.
+3.  **Total Return**:\
+    The overall percentage change in the portfolio's value relative to its starting value over the simulation period. It represents the total gain or loss of the investment.\
+    *Example*: A total return of 3.030271 means the portfolio has grown by 303.03% over the period, implying a significant increase in value.
 
-3. **Total Return**:  
-   The overall percentage change in the portfolio's value relative to its starting value over the simulation period. It represents the total gain or loss of the investment.  
-   *Example*: A total return of 3.030271 means the portfolio has grown by 303.03% over the period, implying a significant increase in value.
+4.  **Emissions**:\
+    The total emissions generated by each company in the portfolio, calculated as:\
+    \[ \text{Emissions} = \text{Initial Investment} \times \text{Allocation for Company} \times \text{Emissions Intensity for Company} \]\
+    This quantifies the carbon emissions associated with the investment in each company based on its emissions intensity and the allocated amount of the portfolio.
 
-4. **Emissions**:  
-   The total emissions generated by each company in the portfolio, calculated as:  
-   \[ \text{Emissions} = \text{Initial Investment} \times \text{Allocation for Company} \times \text{Emissions Intensity for Company} \]  
-   This quantifies the carbon emissions associated with the investment in each company based on its emissions intensity and the allocated amount of the portfolio.
+5.  **Environmental Cost Allocation**:\
+    The monetary cost associated with the environmental impact (emissions) for each company, calculated by multiplying the emissions for each company by the Social Cost of Carbon (SCC). The SCC represents the estimated monetary value of the damage caused by emitting one ton of CO2 (or equivalent greenhouse gases).\
+    This measure helps quantify the financial implications of the environmental impact from each company, highlighting the "environmental burden" of investing in higher-emission companies. It enables investors to consider both financial returns and environmental impacts when making investment decisions.
 
-5. **Environmental Cost Allocation**:  
-   The monetary cost associated with the environmental impact (emissions) for each company, calculated by multiplying the emissions for each company by the Social Cost of Carbon (SCC). The SCC represents the estimated monetary value of the damage caused by emitting one ton of CO2 (or equivalent greenhouse gases).  
-   This measure helps quantify the financial implications of the environmental impact from each company, highlighting the "environmental burden" of investing in higher-emission companies. It enables investors to consider both financial returns and environmental impacts when making investment decisions.
+6.  **Total Environmental Cost**:\
+    The sum of the environmental costs for all companies in the portfolio, calculated by aggregating the environmental cost allocation for each company. This represents the overall financial impact of the portfolio’s emissions, providing insight into the total environmental burden associated with the portfolio.
 
-6. **Total Environmental Cost**:  
-   The sum of the environmental costs for all companies in the portfolio, calculated by aggregating the environmental cost allocation for each company. This represents the overall financial impact of the portfolio’s emissions, providing insight into the total environmental burden associated with the portfolio.
-
-7. **Volatility**:  
-   A statistical measure of the variation in the portfolio's returns over a given period, reflecting the level of risk associated with the portfolio. High volatility indicates significant fluctuations in returns, signifying higher risk, while low volatility means the portfolio's returns are more stable and predictable.  
-   Volatility is calculated based on the standard deviation of monthly returns, annualized by multiplying by the square root of 12. This measure helps investors assess the uncertainty or risk associated with the portfolio's performance.
+7.  **Volatility**:\
+    A statistical measure of the variation in the portfolio's returns over a given period, reflecting the level of risk associated with the portfolio. High volatility indicates significant fluctuations in returns, signifying higher risk, while low volatility means the portfolio's returns are more stable and predictable.\
+    Volatility is calculated based on the standard deviation of monthly returns, annualized by multiplying by the square root of 12. This measure helps investors assess the uncertainty or risk associated with the portfolio's performance.
 
 # Plots
 
@@ -251,178 +250,136 @@ green_firms <- c("NEE", "IBDRY", "ENPH", "BEP", "FSLR")
 brown_firms <- c("XOM", "CVX", "BP", "COP", "SHEL")
 ```
 
-Individual returns for each company 
-```{r}
-# Summarize the company returns across all scenarios
-company_returns_summary <- results %>%
-  group_by(company) %>%
-  summarise(mean_company_return = mean(company_final_return)) %>%
-  arrange(desc(mean_company_return))  # Sort by average return
-```
+Individual returns for each company
 
 ```{r}
-# Add a new column to classify the companies as 'green' or 'brown'
-company_returns_summary$firm_type <- ifelse(company_returns_summary$company %in% green_firms, "Green", ifelse(company_returns_summary$company %in% brown_firms, "Brown", "Other"))
-
-# Plot the individual returns for each company with green and brown color coding
-company_plot <- ggplot(company_returns_summary, aes(x = reorder(company, mean_company_return), y = mean_company_return, fill = firm_type)) +
-  geom_bar(stat = "identity") +
-  scale_fill_manual(values = c("Green" = "seagreen", 
-                               "Brown" = "peachpuff4")) +  
-  labs(title = "Mean Company Return Across Scenarios", 
-       x = "Company", 
-       y = "Mean Return",
-      fill = "Firm Type") +
-  theme_minimal() +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1)) 
-
-company_plot 
-
-ggsave("Mean_Company_Return_Across_Scenarios.png", plot = company_plot, width = 10, height = 6, dpi = 300)
-
-```
-
-
-```{r}
-library(knitr)
-library(kableExtra)
-library(webshot)
-library(here) 
-
-# Create the kable table with renamed columns
-company_kable <- company_returns_summary %>%
-  kable(caption = "Mean Company Returns Across Scenarios", 
-        col.names = c("Company", "Mean Return", "Firm Type")) %>%
-  kable_styling("striped", full_width = F)
-
-# Save the table to an HTML file
-html_file <- here("company_kable.html")
-save_kable(company_kable, file = html_file)
-
-# Convert the HTML file to a PNG image
-webshot(html_file, file = here("company_kable.png"), vwidth = 800, vheight = 600, zoom = 2)
-
-
-```
-
-SUMMARIZE FINAL PORTFOLIO VALUES
-
-```{r}
-# Summarize mean final portfolio values for each company across all scenarios
-company_portfolio_values_summary <- results %>%
-  group_by(company) %>%
-  summarise(mean_company_final_portfolio_value = mean(company_final_portfolio_value, na.rm = TRUE)) %>%
-  arrange(desc(mean_company_final_portfolio_value))  # Sort by average return
-
-# Add a new column to classify the companies as 'green' or 'brown'
-company_portfolio_values_summary$firm_type <- ifelse(
-  company_portfolio_values_summary$company %in% green_firms, "Green",
-  ifelse(company_portfolio_values_summary$company %in% brown_firms, "Brown", "Other")
-)
-
-# Plot the individual returns for each company with green and brown color coding
-portfolio_value_plot <- ggplot(company_portfolio_values_summary, 
-                               aes(x = reorder(company, mean_company_final_portfolio_value), 
-                                   y = mean_company_final_portfolio_value, 
-                                   fill = firm_type)) +
-  geom_bar(stat = "identity") +
-  scale_fill_manual(values = c("Green" = "seagreen", 
-                               "Brown" = "peachpuff4")) +  
-  labs(title = "Company Portfolio Value Per Company", 
-       subtitle = "Mean Across 100 Scenarios Over 5 Years",
-       x = "Company", 
-       y = "Mean Portfolio Value ($)",
-       fill = "Firm Type") +
-  theme_minimal() +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1))
-
-# Display the plot
-portfolio_value_plot
-
-# Save the plot to a file
-ggsave("company_portfolio_values_summary.png", plot = portfolio_value_plot, width = 10, height = 6, dpi = 300)
-
-```
-
-
-
-```{r}
-# Summarize environmental cost allocation by company across all scenarios
-enviro_cost_summary <- results %>%
-  group_by(company) %>%
-  summarise(total_enviro_cost = sum(environmental_cost_allocation))
-
-# Add firm type to environmental cost data
-enviro_cost_summary$firm_type <- ifelse(enviro_cost_summary$company %in% green_firms, "Green", ifelse(enviro_cost_summary$company %in% brown_firms, "Brown", "Other"))
-
-# Plot environmental cost allocation by company
-environmental_plot <- ggplot(enviro_cost_summary, aes(x = reorder(company, total_enviro_cost), y = total_enviro_cost, fill = firm_type)) +
-  geom_bar(stat = "identity") + 
-  scale_fill_manual(values = c("Green" = "seagreen",
-                               "Brown" = "peachpuff4")) +  
-  labs(title = "Total Environmental Cost Per Company", 
-       subtitle = "Mean Across 100 Scenarios Over 5 Years",
-       x = "Company",
-       y = "Total Environmental Cost ($)",
-       fill = "Firm Type") +
-  theme_minimal() +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1))  
-
-environmental_plot 
-
-ggsave("Total_Environmental_Costs.png", plot = environmental_plot, width = 10, height = 6, dpi = 300)
-
-```
-
-```{r}
-# # Summarize environmental cost allocation by company across all scenarios
-# enviro_cost_summary <- results %>%
-#   group_by(company) %>%
-#   summarise(total_enviro_cost = sum(environmental_cost_allocation))
-# 
-# # Add firm type to environmental cost data
-# enviro_cost_summary$firm_type <- ifelse(enviro_cost_summary$company %in% green_firms, "Green", 
-#                                          ifelse(enviro_cost_summary$company %in% brown_firms, "Brown", "Other"))
-
-# Create the kable table with renamed columns for environmental costs
-enviro_cost_kable <- enviro_cost_summary %>%
-  kable(caption = "Total Environmental Cost Allocation by Company Across Scenarios", 
-        col.names = c("Company", "Total Environmental Cost", "Firm Type")) %>%
-  kable_styling("striped", full_width = F)
-
-# Save the table to an HTML file
-html_file <- here("enviro_cost_kable.html")
-save_kable(enviro_cost_kable, file = html_file)
-
-# Convert the HTML file to a PNG image
-webshot(html_file, file = here("enviro_cost_kable.png"), vwidth = 800, vheight = 600, zoom = 2)
-
-```
-
-
-```{r}
-# Summarize results for each company across all scenarios
 company_summary <- results %>%
   group_by(company) %>%
   summarise(
-    mean_return = mean(company_final_return),        # Average return
-    mean_enviro_cost = mean(environmental_cost_allocation),  # Average environmental cost
-    mean_volatility = mean(company_volatility)       # Average volatility
-  )
+    mean_company_return = mean(company_final_return, na.rm = TRUE),
+    mean_company_final_portfolio_value = mean(company_final_portfolio_value, na.rm = TRUE),
+    mean_enviro_cost = mean(environmental_cost_allocation, na.rm = TRUE),
+    mean_volatility = mean(company_volatility, na.rm = TRUE)  # Added for volatility
+  ) %>%
+  arrange(desc(mean_company_return))  # Sort by average return
 
-# Create the plot
-ggplot(company_summary, aes(x = mean_enviro_cost, y = mean_return, size = mean_volatility, color = company)) +
+```
+
+```{r}
+company_summary$firm_type <- ifelse(
+  company_summary$company %in% green_firms, "Green",
+  ifelse(company_summary$company %in% brown_firms, "Brown", "Other")
+)
+
+company_plot <- ggplot(company_summary, aes(x = reorder(company, mean_company_return), y = mean_company_return, fill = firm_type)) +
+  geom_bar(stat = "identity") +
+  scale_fill_manual(values = c("Green" = "seagreen", "Brown" = "peachpuff4")) +
+  labs(title = "Mean Company Return Across Scenarios",
+       x = "Company", y = "Mean Return", fill = "Firm Type") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+ggsave("Mean_Company_Return_Across_Scenarios.png", plot = company_plot, width = 10, height = 6, dpi = 300)
+
+
+company_plot
+```
+Portfolio Value Plot
+```{r}
+portfolio_value_plot <- ggplot(company_summary, aes(x = reorder(company, mean_company_final_portfolio_value), y = mean_company_final_portfolio_value, fill = firm_type)) +
+  geom_bar(stat = "identity") +
+  scale_fill_manual(values = c("Green" = "seagreen", "Brown" = "peachpuff4")) +
+  labs(title = "Company Portfolio Growth",
+       subtitle = "Mean Across 100 Scenarios Over 5 Years",
+       x = "Company", y = "Mean Portfolio Growth ($)", fill = "Firm Type") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+ggsave("company_portfolio_values_summary.png", plot = portfolio_value_plot, width = 10, height = 6, dpi = 300)
+
+portfolio_value_plot
+
+```
+Environmental Cost Plot
+```{r}
+
+# Plot Mean Environmental Cost
+environmental_plot <- ggplot(company_summary, aes(x = reorder(company, mean_enviro_cost), 
+                                                  y = mean_enviro_cost, fill = firm_type)) +
+  geom_bar(stat = "identity") +
+  scale_fill_manual(values = c("Green" = "seagreen", "Brown" = "peachpuff4")) +
+  labs(title = "Mean Environmental Cost Per Company", 
+       subtitle = "Mean Across 100 Scenarios Over 5 Years",
+       x = "Company", y = "Mean Environmental Cost ($)", fill = "Firm Type") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+# Save the plot
+ggsave("mean_environmental_costs.png", plot = environmental_plot, width = 10, height = 6, dpi = 300)
+
+# Display the plot
+environmental_plot
+
+
+```
+Environmental Cost vs Portfolio Growth
+```{r}
+scatter_plot <- ggplot(company_summary, aes(x = mean_enviro_cost, y = mean_company_final_portfolio_value, size = mean_volatility, color = company)) +
   geom_point(alpha = 0.7) +
   labs(
-    title = "Company Returns vs Environmental Cost with Volatility",
-    x = "Average Environmental Cost",
-    y = "Average Company Return",
-    size = "Volatility"
+    title = "Company Portfolio Growth vs Environmental Cost",
+    x = "Mean Environmental Cost ($)",
+    y = "Mean Portfolio Growth ($)",
+    size = "Volatility",
+    color = "Firm Type"
   ) +
   theme_minimal() +
   theme(legend.position = "right")
 
+ggsave("Portfolio_Growth_vs_Environmental_Cost.png", plot = scatter_plot, width = 10, height = 6, dpi = 300)
+
+scatter_plot
+
 ```
+
+```{r}
+scatter_plot <- ggplot(company_summary, aes(x = mean_enviro_cost, y = mean_company_final_portfolio_value, size = mean_volatility, color = firm_type)) +
+  geom_point(alpha = 0.7) +
+  scale_color_manual(values = c("Green" = "seagreen", "Brown" = "peachpuff4")) +  # Manually setting colors for firm types
+  geom_text(aes(label = company), hjust = 0.5, vjust = -1.05, size = 3) +  # Adding company names
+  labs(
+    title = "Company Portfolio Growth vs Environmental Cost",
+    x = "Mean Environmental Cost ($)",
+    y = "Mean Portfolio Growth ($)",
+    size = "Volatility",
+    color = "Firm Type"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "right")
+
+ggsave("Portfolio_Growth_vs_Environmental_Cost.png", plot = scatter_plot, width = 10, height = 6, dpi = 300)
+
+scatter_plot
+
+
+```
+
+
+```{r}
+# Create the kable table with renamed columns for environmental costs
+library(knitr)
+library(kableExtra)
+library(webshot)
+library(here)
+
+company_kable <- company_summary %>%
+  kable(
+    caption = "Company Summary over 100 Scenarios and 5 Years",
+    col.names = c("Company", "Mean Return (%)", "Mean Portfolio Growth ($)", "Mean Environmental Cost ($)", "Mean Voltality", "Firm Type")
+  ) %>%
+  kable_styling("striped", full_width = FALSE)
+
+save_kable(company_kable, file = here("company_summary.html"))webshot(here("company_summary.html"), file = here("company_summary.png"), vwidth = 800, vheight = 600)
 
 
 ```
