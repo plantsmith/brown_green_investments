@@ -17,13 +17,10 @@ execute:
 ---
 
 ```{r}
-
 # Load libraries
 library(tidyverse)
 library(quantmod)
 library(dplyr)
-library(ggplot2)
-
 ```
 
 # Define Portfolios
@@ -133,84 +130,85 @@ set.seed(123)  #for reproducibility
 initial_investment <- 10000 # starting investment is 10k
 n_scenarios <- 100  #number of scenarios to simulate
 n_months <- 60  #simulation for 5 years (60 months)
+
+# Initialize results list to store each scenario's data before combining
+results_list <- vector("list", n_scenarios)
 ```
 
 8.  Create a loop to run 100 investing scenarios over a 5 year time period:
 
 ```{r}
-# Initialize results list to store each scenario's data before combining
-results_list <- vector("list", n_scenarios)
-
 # Run scenarios to simulate random allocation
 for (i in 1:n_scenarios) {
-  allocation <- runif(length(tickers))  # Random allocation for each company
+  # Random allocation for each company
+  allocation <- runif(length(tickers))
   allocation <- allocation / sum(allocation)  # Normalize to sum to 1
-
-# Generate monthly returns for each company
-  company_monthly_returns <- matrix(rnorm(n_months * length(tickers), avg_return / 12, sd),
+  
+  # Generate monthly returns for each company
+  company_monthly_returns <- matrix(rnorm(n_months * length(tickers), avg_return / 12, sd / sqrt(12)),
                                     nrow = n_months, ncol = length(tickers))
-
-# Initialize portfolio value and returns
+  
+  # Initialize portfolio value and returns
   portfolio_value <- initial_investment
   monthly_portfolio_returns <- numeric(n_months)
   
-# Initialize a vector to store individual company volatilities
-  company_volatilities <- numeric(length(tickers))
-
-# Track individual company returns
+  # Initialize matrix and vectors
   company_final_returns <- numeric(length(tickers))
-
-# Calculate emissions and environmental costs
-# initial investment ($) * allocation * emissions factor (metric tonnes CO2 per dollar invested) -  dollars cancel out leaving metric tonnes CO2
+  company_portfolio_values <- matrix(0, nrow = n_months, ncol = length(tickers))
   emissions <- initial_investment * allocation * emissions_intensity
-# Calculate environmental cost
-# environmental cost ($) = emissions (metric tonnes CO2) * SCC (dollars per metric tonne) - metric tonnes cancel out leaveing $
   environmental_cost_allocation <- emissions * SCC
-
+  
   # Update portfolio value based on monthly returns and allocation
   for (j in 1:n_months) {
-    # For each company, calculate individual company returns
     company_returns_at_j <- company_monthly_returns[j, ]  # Returns for all companies at month j
-    company_final_returns <- company_final_returns + company_returns_at_j * allocation  # Accumulated return by company
-
-# Calculate portfolio monthly return
+    
+    # Update portfolio and monthly return
     portfolio_monthly_return <- sum(company_returns_at_j * allocation)
     portfolio_value <- portfolio_value * (1 + portfolio_monthly_return)
     monthly_portfolio_returns[j] <- portfolio_monthly_return
+    
+    # Calculate individual company portfolio values
+    for (k in 1:length(tickers)) {
+      if (j == 1) {
+        company_portfolio_values[j, k] <- initial_investment * allocation[k] * (1 + company_returns_at_j[k])
+      } else {
+        company_portfolio_values[j, k] <- company_portfolio_values[j - 1, k] * (1 + company_returns_at_j[k])
+      }
+    }
+    
+    # Accumulate final returns
+    company_final_returns <- company_final_returns + company_returns_at_j * allocation
   }
-
-# Calculate cumulative return for individual companies
-  total_return <- (portfolio_value - initial_investment) / initial_investment
-  total_enviro_cost_scenario <- sum(environmental_cost_allocation)  # Total environmental cost
   
-# Calculate volatility for each company (standard deviation of returns over time)
-  for (k in 1:length(tickers)) {
-    company_returns <- company_monthly_returns[, k]
-    company_volatility <- sd(company_returns) * sqrt(12)  # Annualize volatility
-    company_volatilities[k] <- company_volatility
-  }
-
-# Calculate portfolio (scenario) volatility based on weighted returns
-  portfolio_volatility <- sd(monthly_portfolio_returns) * sqrt(12)  # Annualize portfolio volatility
-
-# Store results for individual company returns and portfolio return
+  # Final calculations outside the monthly loop
+  total_return <- (portfolio_value - initial_investment) / initial_investment
+  total_enviro_cost_scenario <- sum(environmental_cost_allocation)
+  company_final_portfolio_values <- company_portfolio_values[n_months, ]
+  
+  # Calculate volatilities
+  company_volatilities <- apply(company_monthly_returns, 2, sd) * sqrt(12)  # Annualize
+  portfolio_volatility <- sd(monthly_portfolio_returns) * sqrt(12)
+  
+  # Store results
   results_list[[i]] <- data.frame(
     scenario = i,
     company = tickers,
     allocation = allocation,
     final_portfolio_value = portfolio_value,
     total_return = total_return,
-    company_final_return = company_final_returns,  
+    company_final_return = company_final_returns,
+    company_final_portfolio_value = company_final_portfolio_values,
     emissions = emissions,
     environmental_cost_allocation = environmental_cost_allocation,
     total_enviro_cost_scenario = total_enviro_cost_scenario,
-    company_volatility = company_volatilities,  
-    scenario_volatility = portfolio_volatility  
+    company_volatility = company_volatilities,
+    scenario_volatility = portfolio_volatility
   )
 }
 
-# Combine all results from all scenarios
+# Combine all results
 results <- do.call(rbind, results_list)
+
 ```
 
 
@@ -278,9 +276,75 @@ company_plot <- ggplot(company_returns_summary, aes(x = reorder(company, mean_co
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 90, hjust = 1)) 
 
+company_plot 
+
 ggsave("Mean_Company_Return_Across_Scenarios.png", plot = company_plot, width = 10, height = 6, dpi = 300)
 
 ```
+
+
+```{r}
+library(knitr)
+library(kableExtra)
+library(webshot)
+library(here) 
+
+# Create the kable table with renamed columns
+company_kable <- company_returns_summary %>%
+  kable(caption = "Mean Company Returns Across Scenarios", 
+        col.names = c("Company", "Mean Return", "Firm Type")) %>%
+  kable_styling("striped", full_width = F)
+
+# Save the table to an HTML file
+html_file <- here("company_kable.html")
+save_kable(company_kable, file = html_file)
+
+# Convert the HTML file to a PNG image
+webshot(html_file, file = here("company_kable.png"), vwidth = 800, vheight = 600, zoom = 2)
+
+
+```
+
+SUMMARIZE FINAL PORTFOLIO VALUES
+
+```{r}
+# Summarize mean final portfolio values for each company across all scenarios
+company_portfolio_values_summary <- results %>%
+  group_by(company) %>%
+  summarise(mean_company_final_portfolio_value = mean(company_final_portfolio_value, na.rm = TRUE)) %>%
+  arrange(desc(mean_company_final_portfolio_value))  # Sort by average return
+
+# Add a new column to classify the companies as 'green' or 'brown'
+company_portfolio_values_summary$firm_type <- ifelse(
+  company_portfolio_values_summary$company %in% green_firms, "Green",
+  ifelse(company_portfolio_values_summary$company %in% brown_firms, "Brown", "Other")
+)
+
+# Plot the individual returns for each company with green and brown color coding
+portfolio_value_plot <- ggplot(company_portfolio_values_summary, 
+                               aes(x = reorder(company, mean_company_final_portfolio_value), 
+                                   y = mean_company_final_portfolio_value, 
+                                   fill = firm_type)) +
+  geom_bar(stat = "identity") +
+  scale_fill_manual(values = c("Green" = "seagreen", 
+                               "Brown" = "peachpuff4")) +  
+  labs(title = "Company Portfolio Value Per Company", 
+       subtitle = "Mean Across 100 Scenarios Over 5 Years",
+       x = "Company", 
+       y = "Mean Portfolio Value ($)",
+       fill = "Firm Type") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+# Display the plot
+portfolio_value_plot
+
+# Save the plot to a file
+ggsave("company_portfolio_values_summary.png", plot = portfolio_value_plot, width = 10, height = 6, dpi = 300)
+
+```
+
+
 
 ```{r}
 # Summarize environmental cost allocation by company across all scenarios
@@ -296,25 +360,43 @@ environmental_plot <- ggplot(enviro_cost_summary, aes(x = reorder(company, total
   geom_bar(stat = "identity") + 
   scale_fill_manual(values = c("Green" = "seagreen",
                                "Brown" = "peachpuff4")) +  
-  labs(title = "Total Environmental Cost Allocation by Company Across Scenarios", 
+  labs(title = "Total Environmental Cost Per Company", 
+       subtitle = "Mean Across 100 Scenarios Over 5 Years",
        x = "Company",
-       y = "Total Environmental Cost Allocation",
+       y = "Total Environmental Cost ($)",
        fill = "Firm Type") +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 90, hjust = 1))  
+
+environmental_plot 
 
 ggsave("Total_Environmental_Costs.png", plot = environmental_plot, width = 10, height = 6, dpi = 300)
 
 ```
 
 ```{r}
-#patchwork package to combine plots
-library(patchwork)
+# # Summarize environmental cost allocation by company across all scenarios
+# enviro_cost_summary <- results %>%
+#   group_by(company) %>%
+#   summarise(total_enviro_cost = sum(environmental_cost_allocation))
+# 
+# # Add firm type to environmental cost data
+# enviro_cost_summary$firm_type <- ifelse(enviro_cost_summary$company %in% green_firms, "Green", 
+#                                          ifelse(enviro_cost_summary$company %in% brown_firms, "Brown", "Other"))
 
-# Combine the two plots
-combined_plots <- company_plot + environmental_plot
+# Create the kable table with renamed columns for environmental costs
+enviro_cost_kable <- enviro_cost_summary %>%
+  kable(caption = "Total Environmental Cost Allocation by Company Across Scenarios", 
+        col.names = c("Company", "Total Environmental Cost", "Firm Type")) %>%
+  kable_styling("striped", full_width = F)
 
-combined_plots 
+# Save the table to an HTML file
+html_file <- here("enviro_cost_kable.html")
+save_kable(enviro_cost_kable, file = html_file)
+
+# Convert the HTML file to a PNG image
+webshot(html_file, file = here("enviro_cost_kable.png"), vwidth = 800, vheight = 600, zoom = 2)
+
 ```
 
 
