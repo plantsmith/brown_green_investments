@@ -284,7 +284,9 @@ ggsave("Mean_Company_Return_Across_Scenarios.png", plot = company_plot, width = 
 
 company_plot
 ```
+
 Portfolio Value Plot
+
 ```{r}
 portfolio_value_plot <- ggplot(company_summary, aes(x = reorder(company, mean_company_final_portfolio_value), y = mean_company_final_portfolio_value, fill = firm_type)) +
   geom_bar(stat = "identity") +
@@ -300,7 +302,9 @@ ggsave("company_portfolio_values_summary.png", plot = portfolio_value_plot, widt
 portfolio_value_plot
 
 ```
+
 Environmental Cost Plot
+
 ```{r}
 
 # Plot Mean Environmental Cost
@@ -322,7 +326,9 @@ environmental_plot
 
 
 ```
+
 Environmental Cost vs Portfolio Growth
+
 ```{r}
 scatter_plot <- ggplot(company_summary, aes(x = mean_enviro_cost, y = mean_company_final_portfolio_value, size = mean_volatility, color = company)) +
   geom_point(alpha = 0.7) +
@@ -364,7 +370,6 @@ scatter_plot
 
 ```
 
-
 ```{r}
 # Create the kable table with renamed columns for environmental costs
 library(knitr)
@@ -383,4 +388,3 @@ save_kable(company_kable, file = here("company_summary.html"))webshot(here("comp
 
 
 ```
-
